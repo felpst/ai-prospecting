@@ -1,58 +1,67 @@
 import Company from '../models/company.js';
 import { ApiError, asyncHandler } from '../utils/errorHandler.js';
+import { 
+  buildCompanyFilter, 
+  buildSortOptions, 
+  calculatePagination, 
+  formatResponse 
+} from '../utils/queryBuilder.js';
 
 /**
  * Get paginated companies with filters
  * @route GET /api/companies
  */
 export const getCompanies = asyncHandler(async (req, res) => {
-  const { 
-    page = 1, 
-    limit = 10,
-    industry,
-    country,
-    region,
-    locality,
-    size,
-    query
-  } = req.query;
-
-  const pageNum = parseInt(page, 10);
-  const limitNum = parseInt(limit, 10);
-  const skip = (pageNum - 1) * limitNum;
-  
-  // Build filter
-  const filter = {};
-  
-  if (industry) filter.industry = industry;
-  if (country) filter.country = country;
-  if (region) filter.region = region;
-  if (locality) filter.locality = locality;
-  if (size) filter.size = size;
-  
-  // Text search if query is provided
-  if (query) {
-    filter.$text = { $search: query };
-  }
-  
-  // Execute query with pagination
-  const companies = await Company.find(filter)
-    .skip(skip)
-    .limit(limitNum)
-    .lean();
-  
-  // Get total count for pagination
-  const total = await Company.countDocuments(filter);
-  
-  res.json({
-    companies,
-    pagination: {
-      total,
-      page: pageNum,
-      limit: limitNum,
-      pages: Math.ceil(total / limitNum)
+  try {
+    // Add performance monitoring
+    const startTime = Date.now();
+    
+    // Log the incoming request for debugging
+    console.log(`[API] GET /api/companies with filters: ${JSON.stringify(req.query)}`);
+    
+    // Build filter, sort options, and pagination
+    const filter = buildCompanyFilter(req.query);
+    const sortOptions = buildSortOptions(req.query);
+    const { skip, limit } = calculatePagination(req.query);
+    
+    // Execute query with pagination and sorting
+    const companies = await Company.find(filter, null, { timeout: 30000 }) // Add 30s timeout
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+    
+    // Get total count for pagination
+    const total = await Company.countDocuments(filter);
+    
+    // Calculate query execution time
+    const executionTime = Date.now() - startTime;
+    
+    // Log performance metrics
+    console.log(`[PERF] Company search completed in ${executionTime}ms, found ${total} results`);
+    
+    // Check performance against target (1 second)
+    if (executionTime > 1000) {
+      console.warn(`[WARN] Slow company search query: ${executionTime}ms, filters: ${JSON.stringify(filter)}`);
     }
-  });
+    
+    // Format the response
+    const response = formatResponse(companies, req.query, total, executionTime);
+    
+    // Add cache control headers
+    res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache
+    
+    // Add performance header
+    res.set('X-Response-Time', `${executionTime}ms`);
+    
+    // Send JSON response
+    res.json(response);
+  } catch (error) {
+    console.error(`[ERROR] Company search failed: ${error.message}`);
+    
+    // Let the global error handler handle it
+    throw error;
+  }
 });
 
 /**
@@ -60,15 +69,32 @@ export const getCompanies = asyncHandler(async (req, res) => {
  * @route GET /api/companies/:id
  */
 export const getCompanyById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  
-  const company = await Company.findOne({ id }).lean();
-  
-  if (!company) {
-    throw new ApiError(`Company with ID ${id} not found`, 404);
+  try {
+    const { id } = req.params;
+    
+    console.log(`[API] GET /api/companies/${id}`);
+    
+    const startTime = Date.now();
+    
+    const company = await Company.findOne({ id }).lean();
+    
+    if (!company) {
+      console.log(`[API] Company not found: ${id}`);
+      throw new ApiError(`Company with ID ${id} not found`, 404);
+    }
+    
+    const executionTime = Date.now() - startTime;
+    console.log(`[PERF] Company retrieval for ${id} completed in ${executionTime}ms`);
+    
+    // Add cache control headers for individual companies
+    res.set('Cache-Control', 'public, max-age=3600'); // 1 hour cache
+    res.set('X-Response-Time', `${executionTime}ms`);
+    
+    res.json(company);
+  } catch (error) {
+    console.error(`[ERROR] Company retrieval failed: ${error.message}`);
+    throw error;
   }
-  
-  res.json(company);
 });
 
 /**
@@ -76,26 +102,36 @@ export const getCompanyById = asyncHandler(async (req, res) => {
  * @route POST /api/companies/:id/enrich
  */
 export const enrichCompany = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  
-  // Get the company
-  const company = await Company.findOne({ id });
-  
-  if (!company) {
-    throw new ApiError(`Company with ID ${id} not found`, 404);
-  }
+  try {
+    const { id } = req.params;
+    
+    console.log(`[API] POST /api/companies/${id}/enrich`);
+    
+    // Get the company
+    const company = await Company.findOne({ id });
+    
+    if (!company) {
+      console.log(`[API] Company not found for enrichment: ${id}`);
+      throw new ApiError(`Company with ID ${id} not found`, 404);
+    }
 
-  // TODO: Implement actual enrichment with web scraping and AI in a future task
-  // For now, we'll just return a placeholder response
-  
-  // Update the company with a placeholder enrichment
-  company.enrichment = `This is a placeholder AI-generated summary for ${company.name}. The actual implementation will be added in a future task.`;
-  company.last_enriched = new Date();
-  
-  await company.save();
-  
-  res.json({
-    message: 'Company enriched successfully',
-    company
-  });
+    // TODO: Implement actual enrichment with web scraping and AI in a future task
+    // For now, we'll just return a placeholder response
+    
+    // Update the company with a placeholder enrichment
+    company.enrichment = `This is a placeholder AI-generated summary for ${company.name}. The actual implementation will be added in a future task.`;
+    company.last_enriched = new Date();
+    
+    await company.save();
+    
+    console.log(`[API] Enrichment completed for company: ${id}`);
+    
+    res.json({
+      message: 'Company enriched successfully',
+      company
+    });
+  } catch (error) {
+    console.error(`[ERROR] Company enrichment failed: ${error.message}`);
+    throw error;
+  }
 }); 
