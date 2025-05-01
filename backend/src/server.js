@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import { connectToDatabase } from './utils/database.js';
 import { setupRoutes } from './routes/index.js';
 import { errorHandler } from './utils/errorHandler.js';
+import { initializeData } from './utils/initData.js';
 
 // Initialize express app
 const app = express();
@@ -34,9 +35,16 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectToDatabase();
     
+    // Initialize data (for development)
+    if (process.env.NODE_ENV !== 'production') {
+      await initializeData();
+    }
+    
     // Start the Express server
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+      console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+      console.log(`Health check available at: http://localhost:${PORT}/health`);
+      console.log(`API available at: http://localhost:${PORT}/api`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

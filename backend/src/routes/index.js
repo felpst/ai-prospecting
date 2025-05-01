@@ -1,10 +1,8 @@
 import { Router } from 'express';
 import { ApiError } from '../utils/errorHandler.js';
-
-// Import route modules
-// These will be created in subsequent tasks
-// import companiesRoutes from './companies.js';
-// import savedRoutes from './saved.js';
+import companiesRoutes from './companies.js';
+import savedRoutes from './saved.js';
+import dataRoutes from './data.js';
 
 /**
  * Setup all API routes
@@ -14,8 +12,9 @@ export const setupRoutes = (app) => {
   const apiRouter = Router();
   
   // Mount API routes
-  // apiRouter.use('/companies', companiesRoutes);
-  // apiRouter.use('/saved', savedRoutes);
+  apiRouter.use('/companies', companiesRoutes);
+  apiRouter.use('/saved', savedRoutes);
+  apiRouter.use('/data', dataRoutes);
   
   // Root API endpoint
   apiRouter.get('/', (req, res) => {
