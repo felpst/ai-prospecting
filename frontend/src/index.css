@@ -1,0 +1,105 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: #213547;
+  background-color: #ffffff;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-header {
+  background-color: #1a73e8;
+  padding: 1rem;
+  color: white;
+}
+
+nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.app-footer {
+  background-color: #f2f2f2;
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+}
+
+.page {
+  margin-bottom: 2rem;
+}
+
+.page h1 {
+  margin-bottom: 1rem;
+  color: #1a73e8;
+}
+
+.placeholder {
+  border: 2px dashed #ccc;
+  padding: 2rem;
+  text-align: center;
+  margin-top: 2rem;
+  border-radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #242424;
+  }
+  
+  .app-footer {
+    background-color: #2a2a2a;
+    color: #a0a0a0;
+  }
+  
+  .placeholder {
+    border-color: #444;
+  }
+  
+  .page h1 {
+    color: #60a5fa;
+  }
+} 

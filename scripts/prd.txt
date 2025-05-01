@@ -1,0 +1,172 @@
+<context>
+# Overview
+AI-Prospecting is a B2B sales intelligence platform that enables sales teams to discover, research, and save high-potential companies using rich filters and AI-powered enrichment. The platform will allow users to search through a comprehensive company dataset, generate AI-enriched company summaries, and manage prospect lists for effective sales outreach.
+
+# Core Features
+## 1. Company Search and Discovery
+- Users can filter companies based on structured data (company size, industry, location, founding date, etc.)
+- Search results are paginated for performance
+- AI-powered free-text search capabilities, allowing natural language queries to map to relevant structured fields
+
+## 2. AI-Powered Company Enrichment
+- Generate short, insightful summaries of companies by scraping their landing pages
+- Process and analyze the content using LLM technology (OpenAI, Anthropic)
+- Store enriched company data for future reference
+
+## 3. CRM-Style Prospect Management
+- Save promising companies to a "Saved Prospects" list
+- Access and manage the saved list through a dedicated dashboard
+- Organize and prioritize prospects for follow-up
+
+## 4. Advanced AI Discovery (Bonus Feature)
+- Support complex natural language search queries
+- Leverage external search engines to identify potential matches
+- Extract and match company information to database entries
+
+# User Experience
+## Primary Users
+- Sales Development Representatives (SDRs) looking to build targeted prospect lists
+- Account Executives (AEs) researching potential clients
+- Sales Managers overseeing prospecting efforts
+
+## Key User Flows
+1. Company Search: Users enter filters or natural language queries to discover relevant companies
+2. Company Research: Users view company details and request AI-generated summaries
+3. Prospect Management: Users save promising companies and manage their prospect lists
+</context>
+<PRD>
+# Technical Architecture
+## System Components
+1. **Frontend Application**
+   - React-based web application
+   - Responsive UI with reusable components
+   - State management for search filters and results
+
+2. **Backend API**
+   - Node.js server
+   - RESTful API endpoints for data access
+   - Background processing for AI enrichment
+
+3. **Database Layer**
+   - Storage for company dataset (~24M companies)
+   - Document-based storage for flexible schema
+   - Efficient indexing for search performance
+
+4. **AI Integration Services**
+   - Web scraping module for company landing pages
+   - LLM integration for summary generation
+   - Optional: Search engine integration for advanced discovery
+
+## Data Models
+1. **Company**
+   - id: unique identifier
+   - website: company website URL
+   - name: company name
+   - founded: founding year
+   - size: employee count
+   - locality: city/local area
+   - region: state/province
+   - country: country
+   - industry: company industry category
+   - linkedin_url: LinkedIn profile URL
+   - enrichment: [optional] AI-generated summary
+   - last_enriched: [optional] timestamp of last enrichment
+
+2. **User**
+   - id: unique identifier
+   - email: user email
+   - saved_companies: array of company IDs
+
+## APIs and Integrations
+1. **Core API Endpoints**
+   - GET /api/companies - List companies with filtering and pagination
+   - GET /api/companies/:id - Get company details
+   - POST /api/companies/:id/enrich - Generate AI summary
+   - GET /api/saved - Get user's saved companies
+   - POST /api/saved/:companyId - Save a company
+   - DELETE /api/saved/:companyId - Remove from saved list
+
+2. **External Integrations**
+   - OpenAI/Anthropic API for LLM-based summaries
+   - Web scraper for landing page content
+   - [Optional] Search engine API for advanced discovery
+
+## Infrastructure Requirements
+- Node.js environment for backend
+- MongoDB for flexible document storage
+- Caching layer for performance optimization
+- Background job processing for AI enrichment tasks
+
+# Development Roadmap
+## Phase 1: MVP Foundation
+1. Setup project structure and development environment
+2. Implement database schema and import company dataset
+3. Create basic backend API for company search and filtering
+4. Develop frontend search interface with core filters
+5. Implement basic pagination for search results
+
+## Phase 2: Core Features Implementation
+1. Build company details view
+2. Implement web scraping functionality
+3. Integrate LLM for company summary generation
+4. Create saved companies functionality
+5. Develop saved companies dashboard
+
+## Phase 3: UI Polish and Performance Optimization
+1. Refine UI/UX with loading states and error handling
+2. Implement caching strategy for performance
+3. Optimize database queries and indexing
+4. Add responsive design for mobile compatibility
+5. Implement comprehensive input validation
+
+## Phase 4: Advanced Features (if time permits)
+1. Develop advanced natural language search capability
+2. Implement external search engine integration
+3. Create batch processing for enrichment
+4. Add export functionality for saved companies
+5. Implement user authentication and multi-user support
+
+# Logical Dependency Chain
+1. Database setup and data import must be completed first to enable any search functionality
+2. Basic search API must be functional before frontend search implementation
+3. Company details view is required before enrichment features
+4. Web scraping capability must precede LLM integration
+5. Basic company representation is needed before saved companies feature
+6. Advanced search features should only be implemented after core functionality is stable
+
+# Risks and Mitigations
+## Technical Challenges
+- **Challenge**: Processing and searching a large dataset efficiently
+  **Mitigation**: Use a subset of data for development, implement proper indexing, pagination
+
+- **Challenge**: Reliable web scraping of company websites
+  **Mitigation**: Implement robust error handling, rate limiting, and fallback mechanisms
+
+- **Challenge**: Quality of AI-generated summaries
+  **Mitigation**: Fine-tune prompts, implement content filtering, consider human review for critical cases
+
+## Resource Constraints
+- **Challenge**: Limited development time
+  **Mitigation**: Focus on core features first, leave advanced features for later phases
+
+- **Challenge**: Potential API usage costs
+  **Mitigation**: Implement caching of enriched data, batch processing where possible, usage limits
+
+# Appendix
+## Dataset Details
+- Source: company_dataset.json in project root
+- Size: ~24 million companies (using a subset for development)
+- Fields: id, website, name, founded, size, locality, region, country, industry, linkedin_url
+
+## Technical Stack
+- Frontend: React
+- Backend: Node.js
+- Database: MongoDB (recommended for flexible schema)
+- AI: OpenAI/Anthropic APIs
+- Scraping: Puppeteer/Playwright
+
+## Performance Targets
+- Search results should load in under 1 second
+- Enrichment process should complete within 10 seconds
+- System should handle at least 100 concurrent users
+</PRD> 
