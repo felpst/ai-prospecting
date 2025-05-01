@@ -1,0 +1,27 @@
+.details-section {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.details-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.section-title {
+  margin: 0;
+  padding: 15px 20px;
+  background-color: #f5f7f9;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 18px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-content {
+  padding: 20px;
+} 

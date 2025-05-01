@@ -1,14 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
 import HomePage from './pages/HomePage'
+import CompanyDetailsPage from './pages/CompanyDetailsPage'
 
 // Placeholder components for future tasks
-const CompanyDetailsPage = () => (
-  <div className="page">
-    <h1>Company Details</h1>
-    <p>This page will be implemented in future tasks</p>
-  </div>
-)
-
 const SavedProspectsPage = () => (
   <div className="page">
     <h1>Saved Prospects</h1>
