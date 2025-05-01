@@ -6,6 +6,8 @@ import {
   calculatePagination, 
   formatResponse 
 } from '../utils/queryBuilder.js';
+import * as companyService from '../services/companyService.js';
+import * as enrichmentService from '../services/enrichmentService.js';
 
 /**
  * Get paginated companies with filters
@@ -76,13 +78,28 @@ export const getCompanyById = asyncHandler(async (req, res) => {
     
     const startTime = Date.now();
     
-    const company = await Company.findOne({ id }).lean();
+    // Get the company data
+    const company = await companyService.getCompanyById(id);
     
+    // If company not found, return 404
     if (!company) {
       console.log(`[API] Company not found: ${id}`);
       throw new ApiError(`Company with ID ${id} not found`, 404);
     }
     
+    // Get enrichment data if available
+    const enrichment = await enrichmentService.getEnrichmentData(company);
+    
+    // Merge company with enrichment data
+    const enrichedCompany = enrichmentService.mergeCompanyWithEnrichment(
+      companyService.formatCompanyResponse(company), 
+      enrichment
+    );
+    
+    // Calculate if enrichment refresh is needed
+    const needsRefresh = enrichmentService.shouldRefreshEnrichment(company);
+    
+    // Calculate execution time
     const executionTime = Date.now() - startTime;
     console.log(`[PERF] Company retrieval for ${id} completed in ${executionTime}ms`);
     
@@ -90,7 +107,18 @@ export const getCompanyById = asyncHandler(async (req, res) => {
     res.set('Cache-Control', 'public, max-age=3600'); // 1 hour cache
     res.set('X-Response-Time', `${executionTime}ms`);
     
-    res.json(company);
+    // Add a header to indicate if enrichment refresh is needed
+    res.set('X-Enrichment-Refresh-Needed', needsRefresh.toString());
+    
+    // Return the enhanced company data
+    res.json({
+      company: enrichedCompany,
+      meta: {
+        executionTime: `${executionTime}ms`,
+        enrichmentAvailable: !!enrichment,
+        needsRefresh
+      }
+    });
   } catch (error) {
     console.error(`[ERROR] Company retrieval failed: ${error.message}`);
     throw error;

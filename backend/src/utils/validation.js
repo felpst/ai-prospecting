@@ -49,8 +49,31 @@ export const companySearchSchema = Joi.object({
  */
 export const companyIdSchema = Joi.object({
   id: Joi.string().required()
+    .min(10).max(50) // Typical length of IDs in the database
+    .pattern(/^[a-zA-Z0-9]+$/) // Alphanumeric characters only
     .description('Company unique identifier')
 });
+
+/**
+ * Company response schema for documentation
+ * This schema represents what a company object looks like in API responses
+ */
+export const companyResponseSchema = {
+  id: Joi.string().required().description('Unique company identifier'),
+  name: Joi.string().required().description('Company name'),
+  website: Joi.string().allow(null, '').description('Company website URL'),
+  industry: Joi.string().allow(null, '').description('Industry sector'),
+  founded: Joi.number().integer().allow(null).description('Year founded'),
+  size: Joi.string().allow(null, '').description('Company size range (e.g., "1-10", "11-50")'),
+  locality: Joi.string().allow(null, '').description('City/locality'),
+  region: Joi.string().allow(null, '').description('State/province/region'),
+  country: Joi.string().allow(null, '').description('Country'),
+  linkedin_url: Joi.string().allow(null, '').description('LinkedIn profile URL'),
+  enrichment: Joi.string().allow(null, '').description('AI-generated enrichment data'),
+  last_enriched: Joi.date().allow(null).description('Date of last enrichment'),
+  createdAt: Joi.date().description('Record creation timestamp'),
+  updatedAt: Joi.date().description('Record last update timestamp')
+};
 
 /**
  * Middleware to validate request query parameters
