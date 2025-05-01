@@ -28,8 +28,7 @@ export const importCompanyData = async (limit = 100, batchSize = 100) => {
     // Check if we already have companies in the database
     const count = await Company.countDocuments();
     if (count > 0) {
-      console.log(`Database already has ${count} companies. Skipping import.`);
-      return { success: true, message: `Database already has ${count} companies` };
+      console.log(`Database already has ${count} companies. Continuing import.`);
     }
     
     return new Promise((resolve, reject) => {
@@ -43,7 +42,10 @@ export const importCompanyData = async (limit = 100, batchSize = 100) => {
         
         let companiesProcessed = 0;
         let companiesImported = 0;
+        let companiesSkipped = 0;
+        let companiesFailed = 0;
         let currentBatch = [];
+        let seenIds = new Set(); // Track IDs we've seen to prevent duplicates
         
         console.log(`Processing file in line-by-line streaming mode...`);
         
@@ -59,6 +61,15 @@ export const importCompanyData = async (limit = 100, batchSize = 100) => {
             const company = JSON.parse(line);
             companiesProcessed++;
             
+            // Skip duplicates
+            if (seenIds.has(company.id)) {
+              companiesSkipped++;
+              return;
+            }
+            
+            // Add ID to tracking set
+            seenIds.add(company.id);
+            
             // Add to current batch
             currentBatch.push(company);
             
@@ -68,12 +79,12 @@ export const importCompanyData = async (limit = 100, batchSize = 100) => {
               rl.pause();
               
               try {
-                // Insert the batch
-                await Company.insertMany(currentBatch);
+                // Insert the batch with ordered:false to continue on error
+                await Company.insertMany(currentBatch, { ordered: false });
                 companiesImported += currentBatch.length;
                 
                 const progress = Math.min(100, Math.round((companiesProcessed / limit) * 100));
-                console.log(`Progress: ${progress}% (${companiesImported}/${limit} companies imported)`);
+                console.log(`Progress: ${progress}% (${companiesImported} companies imported, ${companiesSkipped} skipped, ${companiesFailed} failed)`);
                 
                 // Clear the batch
                 currentBatch = [];
@@ -81,8 +92,40 @@ export const importCompanyData = async (limit = 100, batchSize = 100) => {
                 // Resume line reading
                 rl.resume();
               } catch (error) {
-                console.error(`Error inserting batch: ${error.message}`);
-                // Resume the stream for next batch despite error
+                // With ordered:false, some documents may have been inserted despite errors
+                if (error.writeErrors) {
+                  // Count how many actually failed vs succeeded
+                  const failedInBatch = error.writeErrors.length;
+                  const succeededInBatch = currentBatch.length - failedInBatch;
+                  
+                  companiesFailed += failedInBatch;
+                  companiesImported += succeededInBatch;
+                  
+                  // Extract duplicate key errors for logging
+                  const duplicateIds = error.writeErrors
+                    .filter(err => err.code === 11000)
+                    .map(err => {
+                      try {
+                        // Extract ID from error message 
+                        const match = err.errmsg.match(/id:\s*"([^"]+)"/);
+                        return match ? match[1] : 'unknown';
+                      } catch (e) {
+                        return 'unparseable';
+                      }
+                    });
+                  
+                  if (duplicateIds.length > 0) {
+                    console.log(`Skipped ${duplicateIds.length} duplicate records`);
+                  }
+                } else {
+                  companiesFailed += currentBatch.length;
+                  console.error(`Error inserting batch: ${error.message}`);
+                }
+                
+                // Clear the batch
+                currentBatch = [];
+                
+                // Resume line reading
                 rl.resume();
               }
             }
@@ -98,17 +141,32 @@ export const importCompanyData = async (limit = 100, batchSize = 100) => {
           // Insert any remaining companies
           if (currentBatch.length > 0) {
             try {
-              await Company.insertMany(currentBatch);
+              await Company.insertMany(currentBatch, { ordered: false });
               companiesImported += currentBatch.length;
             } catch (error) {
-              console.error(`Error inserting final batch: ${error.message}`);
+              if (error.writeErrors) {
+                companiesFailed += error.writeErrors.length;
+                companiesImported += (currentBatch.length - error.writeErrors.length);
+              } else {
+                companiesFailed += currentBatch.length;
+                console.error(`Error inserting final batch: ${error.message}`);
+              }
             }
           }
           
-          console.log(`Import completed: ${companiesImported} companies imported`);
+          const finalCount = await Company.countDocuments();
+          console.log(`
+Import completed: 
+- ${companiesProcessed} companies processed
+- ${companiesImported} companies imported successfully
+- ${companiesSkipped} companies skipped (duplicates)
+- ${companiesFailed} companies failed to import
+- ${finalCount} total companies in database
+          `);
+          
           resolve({ 
             success: true, 
-            message: `Imported ${companiesImported} companies` 
+            message: `Imported ${companiesImported} companies (${finalCount} total in database)` 
           });
         });
         

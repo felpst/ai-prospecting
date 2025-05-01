@@ -1,119 +1,186 @@
-import { useState } from 'react';
-import { CompanySearchParams } from '../services/api';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { CompanyAPI, CompanySearchParams, Company } from '../services/api';
+import SearchForm from '../components/SearchForm';
+import SearchResults from '../components/SearchResults';
+import Pagination from '../components/Pagination';
+import LoadingIndicator from '../components/LoadingIndicator';
+import ErrorMessage from '../components/ErrorMessage';
 import './HomePage.css';
 
-const HomePage = () => {
-  const [searchParams, setSearchParams] = useState<CompanySearchParams>({
-    page: 1,
-    limit: 10
-  });
-  const [isSearching, setIsSearching] = useState<boolean>(false);
+// Default search parameters
+const DEFAULT_PARAMS: CompanySearchParams = {
+  page: 1,
+  limit: 10,
+  sort: 'name',
+  order: 'asc'
+};
 
-  const handleSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    setIsSearching(true);
+// Helper to convert search params to state
+const parseSearchParams = (searchParams: URLSearchParams): CompanySearchParams => {
+  const params: CompanySearchParams = { ...DEFAULT_PARAMS };
+  
+  // Extract query parameters
+  for (const [key, value] of searchParams.entries()) {
+    if (key === 'page' || key === 'limit' || key === 'foundedMin' || key === 'foundedMax') {
+      // Type assertion to handle the dynamic property assignment
+      (params as any)[key] = parseInt(value, 10) || (DEFAULT_PARAMS as any)[key];
+    } else if (key in params || key === 'query' || key === 'industry' || key === 'country' || 
+               key === 'region' || key === 'locality' || key === 'size' || key === 'founded' || 
+               key === 'sort' || key === 'order') {
+      // Only assign known keys to prevent issues
+      (params as any)[key] = value;
+    }
+  }
+  
+  return params;
+};
+
+const HomePage = () => {
+  // State management
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filters, setFilters] = useState<CompanySearchParams>(
+    parseSearchParams(searchParams)
+  );
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [totalCompanies, setTotalCompanies] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedCompanies, setSavedCompanies] = useState<string[]>([]);
+
+  // Save company IDs to local storage
+  const saveCompany = useCallback((id: string) => {
+    setSavedCompanies(prev => {
+      const updated = [...prev, id];
+      localStorage.setItem('savedCompanies', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  // Remove company ID from local storage
+  const unsaveCompany = useCallback((id: string) => {
+    setSavedCompanies(prev => {
+      const updated = prev.filter(companyId => companyId !== id);
+      localStorage.setItem('savedCompanies', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  // Load saved companies from localStorage on initial load
+  useEffect(() => {
+    const savedData = localStorage.getItem('savedCompanies');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setSavedCompanies(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+        console.error('Error parsing saved companies:', e);
+      }
+    }
+  }, []);
+
+  // Fetch companies based on current filters
+  const fetchCompanies = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     
-    // In a future task, we'll implement the actual API call
-    // For now just simulate a search
-    setTimeout(() => {
-      setIsSearching(false);
-      console.log('Search with params:', searchParams);
-    }, 1000);
+    try {
+      const response = await CompanyAPI.searchCompanies(filters);
+      
+      setCompanies(response.companies);
+      setTotalCompanies(response.pagination.total);
+      setTotalPages(response.pagination.pages);
+      
+      // Update search params in URL
+      setSearchParams(
+        Object.entries(filters).reduce((params, [key, value]) => {
+          // Check if value exists and is different from default
+          const defaultValue = (DEFAULT_PARAMS as any)[key];
+          if (value !== undefined && value !== '' && value !== defaultValue) {
+            params.set(key, String(value));
+          } else if (params.has(key)) {
+            params.delete(key);
+          }
+          return params;
+        }, new URLSearchParams())
+      );
+    } catch (err) {
+      console.error('Error fetching companies:', err);
+      setError('Failed to load companies. Please try again.');
+      setCompanies([]);
+      setTotalCompanies(0);
+      setTotalPages(1);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters, setSearchParams]);
+
+  // Sync with URL params on initial load
+  useEffect(() => {
+    setFilters(parseSearchParams(searchParams));
+  }, []);
+
+  // Update results when filters change
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
+
+  // Handle search form submission
+  const handleSearch = (newFilters: CompanySearchParams) => {
+    setFilters(newFilters);
   };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = event.target;
-    setSearchParams((prev) => ({ ...prev, [name]: value }));
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    setFilters(prev => ({ ...prev, page }));
+  };
+
+  // Handle retry after error
+  const handleRetry = () => {
+    fetchCompanies();
   };
 
   return (
     <div className="page">
-      <h1>AI-Prospecting</h1>
-      <p>B2B sales intelligence platform</p>
-      
+      <div className="page-header">
+        <h1>AI-Prospecting</h1>
+        <p className="tagline">Find and enrich company data for B2B sales intelligence</p>
+      </div>
+
       <div className="search-container">
-        <h2>Company Search</h2>
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="form-group">
-            <input
-              type="text"
-              name="query"
-              placeholder="Search..."
-              value={searchParams.query || ''}
-              onChange={handleInputChange}
-              className="search-input"
+        <SearchForm
+          initialFilters={filters}
+          onSearch={handleSearch}
+          isLoading={isLoading}
+        />
+      </div>
+
+      {error ? (
+        <ErrorMessage 
+          message={error} 
+          onAction={handleRetry} 
+        />
+      ) : (
+        <>
+          <SearchResults
+            companies={companies}
+            total={totalCompanies}
+            isLoading={isLoading}
+            onSaveCompany={saveCompany}
+            savedCompanies={savedCompanies}
+          />
+          
+          {!isLoading && companies.length > 0 && (
+            <Pagination
+              currentPage={filters.page || 1}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              disabled={isLoading}
             />
-          </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="industry">Industry</label>
-              <select 
-                name="industry" 
-                id="industry"
-                value={searchParams.industry || ''}
-                onChange={handleInputChange}
-              >
-                <option value="">All Industries</option>
-                <option value="Technology">Technology</option>
-                <option value="Healthcare">Healthcare</option>
-                <option value="Finance">Finance</option>
-                <option value="Education">Education</option>
-                <option value="Manufacturing">Manufacturing</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="country">Country</label>
-              <select 
-                name="country" 
-                id="country"
-                value={searchParams.country || ''}
-                onChange={handleInputChange}
-              >
-                <option value="">All Countries</option>
-                <option value="United States">United States</option>
-                <option value="United Kingdom">United Kingdom</option>
-                <option value="Canada">Canada</option>
-                <option value="Germany">Germany</option>
-                <option value="France">France</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="size">Company Size</label>
-              <select 
-                name="size" 
-                id="size"
-                value={searchParams.size || ''}
-                onChange={handleInputChange}
-              >
-                <option value="">All Sizes</option>
-                <option value="1-10">1-10 employees</option>
-                <option value="11-50">11-50 employees</option>
-                <option value="51-200">51-200 employees</option>
-                <option value="201-500">201-500 employees</option>
-                <option value="501+">501+ employees</option>
-              </select>
-            </div>
-          </div>
-          
-          <button 
-            type="submit" 
-            className="search-button"
-            disabled={isSearching}
-          >
-            {isSearching ? 'Searching...' : 'Search'}
-          </button>
-        </form>
-      </div>
-      
-      <div className="search-results">
-        <div className="placeholder">
-          <h3>Search Results</h3>
-          <p>Company search results will appear here in future tasks</p>
-        </div>
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

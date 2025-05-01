@@ -18,6 +18,11 @@ export interface CompanySearchParams {
   locality?: string;
   size?: string;
   query?: string;
+  founded?: number;
+  foundedMin?: number;
+  foundedMax?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
 }
 
 // Interface for company data

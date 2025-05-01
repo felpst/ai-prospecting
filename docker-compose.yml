@@ -24,6 +24,7 @@ services:
       - "3001:3001"
     volumes:
       - ./backend:/app
+      - ./company_dataset.json:/app/../company_dataset.json
       - /app/node_modules
     environment:
       - NODE_ENV=development
@@ -31,8 +32,15 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/ai-prospecting
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - NODE_OPTIONS=--max-old-space-size=8192
     depends_on:
       - mongodb
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
 
   mongodb:
     image: mongo:latest
@@ -42,6 +50,14 @@ services:
       - mongodb-data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=ai-prospecting
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    command: ["--wiredTigerCacheSizeGB", "2"]
 
 volumes:
-  mongodb-data: 
+  mongodb-data:
+    driver: local 

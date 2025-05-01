@@ -16,7 +16,8 @@
     "parse-prd": "node scripts/dev.js parse-prd",
     "start:frontend": "npm run dev --workspace=frontend",
     "start:backend": "npm run dev --workspace=backend",
-    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\""
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\"",
+    "setup": "node setup.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
