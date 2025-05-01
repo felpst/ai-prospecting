@@ -1,22 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
-import { useState } from 'react'
+import HomePage from './pages/HomePage'
 
-// Import pages when they're created in future tasks
-// import HomePage from './pages/HomePage'
-// import CompanyDetailsPage from './pages/CompanyDetailsPage'
-// import SavedProspectsPage from './pages/SavedProspectsPage'
-
-const HomePage = () => (
-  <div className="page">
-    <h1>AI-Prospecting</h1>
-    <p>B2B sales intelligence platform</p>
-    <div className="placeholder">
-      <h2>Company Search</h2>
-      <p>Search functionality will be implemented in future tasks</p>
-    </div>
-  </div>
-)
-
+// Placeholder components for future tasks
 const CompanyDetailsPage = () => (
   <div className="page">
     <h1>Company Details</h1>

@@ -1,0 +1,109 @@
+.company-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
+
+.company-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.company-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.company-card-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1a73e8;
+}
+
+.company-card-content {
+  margin-bottom: 16px;
+}
+
+.company-card-content p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
+
+.company-card-enrichment {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.company-card-enrichment h4 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  color: #555;
+}
+
+.company-card-enrichment small {
+  display: block;
+  margin-top: 8px;
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.save-button {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.save-button:hover {
+  background-color: #e8e8e8;
+}
+
+.save-button.saved {
+  background-color: #e1f5fe;
+  border-color: #81d4fa;
+  color: #0288d1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .company-card {
+    background-color: #2a2a2a;
+    border-color: #444;
+  }
+
+  .company-card-header h3 {
+    color: #60a5fa;
+  }
+
+  .company-card-enrichment {
+    border-color: #444;
+  }
+
+  .company-card-enrichment h4 {
+    color: #ccc;
+  }
+
+  .save-button {
+    background-color: #333;
+    border-color: #555;
+    color: #eee;
+  }
+
+  .save-button:hover {
+    background-color: #444;
+  }
+
+  .save-button.saved {
+    background-color: #1e3a5f;
+    border-color: #2c5282;
+    color: #90cdf4;
+  }
+} 
