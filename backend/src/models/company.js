@@ -62,13 +62,50 @@ const companySchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Text search index on key fields
+// Optimized text search index with weights for different fields
 companySchema.index({
   name: 'text',
   industry: 'text',
   locality: 'text',
   region: 'text',
   country: 'text'
+}, {
+  name: 'optimized_text_search',
+  weights: {
+    name: 10,         // Company name is most important
+    industry: 5,       // Industry is very relevant
+    locality: 3,       // City/locality is moderately important
+    region: 2,         // Region/state is less important
+    country: 1         // Country is least important in text search
+  },
+  default_language: 'english'
+});
+
+// Compound indexes for common query patterns
+companySchema.index({ industry: 1, country: 1 }, { 
+  name: 'idx_industry_country',
+  background: true
+});
+
+companySchema.index({ industry: 1, size: 1 }, {
+  name: 'idx_industry_size',
+  background: true
+});
+
+companySchema.index({ country: 1, region: 1, locality: 1 }, {
+  name: 'idx_location_hierarchy',
+  background: true
+});
+
+companySchema.index({ founded: 1 }, {
+  name: 'idx_founded',
+  background: true
+});
+
+// Compound index for sorting by name within an industry
+companySchema.index({ industry: 1, name: 1 }, {
+  name: 'idx_industry_name_sort',
+  background: true
 });
 
 // Virtual for full location string

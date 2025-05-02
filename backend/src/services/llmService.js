@@ -15,6 +15,7 @@ class ApiError extends Error {
 // Import necessary modules
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
+import * as llmCacheService from './llmCacheService.js';
 
 // --- Configuration ---
 
@@ -46,6 +47,9 @@ const MAX_PROMPT_TOKENS = 3000; // Example limit, adjust as needed
 
 const LLM_RETRY_ATTEMPTS = 3;
 const LLM_INITIAL_DELAY_MS = 1000;
+
+// Cache configuration
+const USE_LLM_CACHING = process.env.LLM_CACHING !== 'false'; // Default to true
 
 // --- Retry Logic Helper ---
 
@@ -124,6 +128,16 @@ export const generateCompanySummary = async (companyData, scrapedContent) => {
     throw new ApiError('Anthropic service is not configured or failed to initialize. Please check server configuration.', 503); // Service Unavailable
   }
 
+  // Check cache if enabled
+  if (USE_LLM_CACHING && companyData.id) {
+    // Try to get from cache first
+    const cachedSummary = await llmCacheService.getCachedCompanySummary(companyData.id);
+    if (cachedSummary) {
+      logger.info(`Using cached summary for company ${companyData.id}`);
+      return cachedSummary;
+    }
+  }
+
   // Wrap the core logic in the retry function
   return withLlmRetry(async () => {
     const startTime = Date.now();
@@ -167,9 +181,41 @@ Focus on the company's core business, products/services, target market, and uniq
       throw new ApiError('Failed to generate summary: Empty or invalid response from LLM', 500);
     }
 
+    // Cache the result if enabled
+    if (USE_LLM_CACHING && companyData.id) {
+      await llmCacheService.cacheCompanySummary(companyData.id, summary);
+    }
+
     logger.info(`Successfully generated summary for company: ${companyData.id || companyData.name}`);
     return summary;
   }); // End of withLlmRetry wrapper
+};
+
+/**
+ * Generic method to run an LLM prompt with caching
+ * @param {Object} params - Parameters for the LLM prompt
+ * @param {Function} callLlmFn - Function that calls the LLM
+ * @returns {Promise<Object>} - The LLM response
+ */
+export const runCachedLlmPrompt = async (params, callLlmFn) => {
+  // Check cache if enabled
+  if (USE_LLM_CACHING) {
+    const cachedResponse = await llmCacheService.getCachedLlmResponse(params);
+    if (cachedResponse) {
+      logger.info('Using cached LLM response');
+      return cachedResponse.response;
+    }
+  }
+  
+  // Call LLM if not cached
+  const response = await callLlmFn();
+  
+  // Cache the result if enabled
+  if (USE_LLM_CACHING) {
+    await llmCacheService.cacheLlmResponse(params, response);
+  }
+  
+  return response;
 };
 
 // --- Helper Functions ---

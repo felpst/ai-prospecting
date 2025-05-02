@@ -6,6 +6,12 @@ import {
   calculatePagination, 
   formatResponse 
 } from '../utils/queryBuilder.js';
+import { 
+  shouldUseCursorPagination, 
+  extractCursorInfo, 
+  cursorPaginate, 
+  formatPaginationLinks 
+} from '../utils/paginationUtils.js';
 import * as companyService from '../services/companyService.js';
 import * as enrichmentService from '../services/enrichmentService.js';
 import * as scraperService from '../services/scraperService.js';
@@ -25,43 +31,91 @@ export const getCompanies = asyncHandler(async (req, res) => {
     // Log the incoming request for debugging
     console.log(`[API] GET /api/companies with filters: ${JSON.stringify(req.query)}`);
     
-    // Build filter, sort options, and pagination
+    // Build filter from query parameters
     const filter = buildCompanyFilter(req.query);
     const sortOptions = buildSortOptions(req.query);
-    const { skip, limit } = calculatePagination(req.query);
     
-    // Execute query with pagination and sorting
-    const companies = await Company.find(filter, null, { timeout: 30000 }) // Add 30s timeout
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .lean();
-    
-    // Get total count for pagination
-    const total = await Company.countDocuments(filter);
-    
-    // Calculate query execution time
-    const executionTime = Date.now() - startTime;
-    
-    // Log performance metrics
-    console.log(`[PERF] Company search completed in ${executionTime}ms, found ${total} results`);
-    
-    // Check performance against target (1 second)
-    if (executionTime > 1000) {
-      console.warn(`[WARN] Slow company search query: ${executionTime}ms, filters: ${JSON.stringify(filter)}`);
+    // Determine if we should use cursor-based pagination for better performance
+    if (shouldUseCursorPagination(req.query)) {
+      // Extract cursor information from request
+      const cursorInfo = extractCursorInfo(req);
+      
+      // Use cursor-based pagination
+      const { results, pagination } = await cursorPaginate(
+        Company,
+        filter,
+        sortOptions,
+        cursorInfo,
+        { count: req.query.count === 'true' } // Only count when explicitly requested
+      );
+      
+      // Format response with pagination links
+      const paginationData = formatPaginationLinks(req, pagination);
+      
+      // Calculate query execution time
+      const executionTime = Date.now() - startTime;
+      
+      // Log performance metrics
+      console.log(`[PERF] Company search with cursor pagination completed in ${executionTime}ms, found ${results.length} results`);
+      
+      // Add cache control and performance headers
+      res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache
+      res.set('X-Response-Time', `${executionTime}ms`);
+      res.set('X-Pagination-Type', 'cursor');
+      
+      // Send JSON response
+      res.json({
+        companies: results,
+        pagination: paginationData.meta,
+        links: paginationData.links,
+        meta: {
+          filters: req.query,
+          executionTime: `${executionTime}ms`
+        }
+      });
+    } else {
+      // Fallback to traditional skip/limit pagination for backward compatibility
+      const { skip, limit } = calculatePagination(req.query);
+      
+      // Execute query with pagination and sorting
+      const companies = await Company.find(filter, null, { timeout: 30000 }) // Add 30s timeout
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      
+      // Get total count for pagination
+      const total = await Company.countDocuments(filter);
+      
+      // Calculate query execution time
+      const executionTime = Date.now() - startTime;
+      
+      // Log performance metrics
+      console.log(`[PERF] Company search with offset pagination completed in ${executionTime}ms, found ${total} results`);
+      
+      // Check performance against target (1 second)
+      if (executionTime > 1000) {
+        console.warn(`[WARN] Slow company search query: ${executionTime}ms, filters: ${JSON.stringify(filter)}`);
+        
+        // Recommend cursor pagination for slow queries
+        if (parseInt(req.query.page || '1', 10) > 3) {
+          console.warn('[WARN] Consider using cursor-based pagination for better performance');
+        }
+      }
+      
+      // Format the response
+      const response = formatResponse(companies, req.query, total, executionTime);
+      
+      // Add cache control headers
+      res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache
+      
+      // Add performance header
+      res.set('X-Response-Time', `${executionTime}ms`);
+      res.set('X-Pagination-Type', 'offset');
+      
+      // Send JSON response
+      res.json(response);
     }
-    
-    // Format the response
-    const response = formatResponse(companies, req.query, total, executionTime);
-    
-    // Add cache control headers
-    res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache
-    
-    // Add performance header
-    res.set('X-Response-Time', `${executionTime}ms`);
-    
-    // Send JSON response
-    res.json(response);
   } catch (error) {
     console.error(`[ERROR] Company search failed: ${error.message}`);
     

@@ -1,0 +1,214 @@
+{
+  "generated": "2025-05-02T19:56:59.274Z",
+  "collections": {
+    "users": {
+      "count": 2,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "email_1",
+          "key": {
+            "email": 1
+          },
+          "unique": true,
+          "sparse": false,
+          "background": true
+        }
+      ]
+    },
+    "companies": {
+      "count": 9,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "industry_1",
+          "key": {
+            "industry": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "text_search_index",
+          "key": {
+            "_fts": "text",
+            "_ftsx": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "country_1",
+          "key": {
+            "country": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "name_1",
+          "key": {
+            "name": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "website_1",
+          "key": {
+            "website": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "locality_1",
+          "key": {
+            "locality": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "region_1",
+          "key": {
+            "region": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "id_1",
+          "key": {
+            "id": 1
+          },
+          "unique": true,
+          "sparse": false,
+          "background": true
+        }
+      ]
+    },
+    "scrapedcontents": {
+      "count": 10,
+      "indexes": [
+        {
+          "name": "_id_",
+          "key": {
+            "_id": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": false
+        },
+        {
+          "name": "url_1",
+          "key": {
+            "url": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": true
+        },
+        {
+          "name": "companyId_1",
+          "key": {
+            "companyId": 1
+          },
+          "unique": false,
+          "sparse": true,
+          "background": true
+        },
+        {
+          "name": "domain_1",
+          "key": {
+            "domain": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": true
+        },
+        {
+          "name": "scrapeDate_1",
+          "key": {
+            "scrapeDate": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": true
+        },
+        {
+          "name": "status_1",
+          "key": {
+            "status": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": true
+        },
+        {
+          "name": "expiresAt_1",
+          "key": {
+            "expiresAt": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "expireAfterSeconds": 0,
+          "background": true
+        },
+        {
+          "name": "domain_1_status_1",
+          "key": {
+            "domain": 1,
+            "status": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": true
+        },
+        {
+          "name": "companyId_1_status_1",
+          "key": {
+            "companyId": 1,
+            "status": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": true
+        },
+        {
+          "name": "scrapeDate_-1_status_1",
+          "key": {
+            "scrapeDate": -1,
+            "status": 1
+          },
+          "unique": false,
+          "sparse": false,
+          "background": true
+        }
+      ]
+    }
+  }
+}

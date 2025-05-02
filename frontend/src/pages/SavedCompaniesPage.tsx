@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Company, SavedCompaniesAPI } from '../services/api';
 import CompanyCard from '../components/CompanyCard';
@@ -17,7 +17,7 @@ const sortOptions = [
   { value: 'founded-desc', label: 'Founded (Newest first)' }
 ];
 
-const SavedCompaniesPage = () => {
+const SavedCompaniesPage: React.FC = () => {
   // State management
   const [savedCompanies, setSavedCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ const SavedCompaniesPage = () => {
     try {
       await SavedCompaniesAPI.unsaveCompany(companyId);
       // Remove from state
-      setSavedCompanies(prev => prev.filter(company => company.id !== companyId));
+      setSavedCompanies((prev: Company[]) => prev.filter((company: Company) => company.id !== companyId));
     } catch (err) {
       console.error('Error removing saved company:', err);
       setError('Failed to remove company from saved list. Please try again.');
@@ -152,7 +152,7 @@ const SavedCompaniesPage = () => {
     let filtered = savedCompanies;
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
-      filtered = savedCompanies.filter(company => 
+      filtered = savedCompanies.filter((company: Company) => 
         company.name.toLowerCase().includes(query) ||
         (company.industry && company.industry.toLowerCase().includes(query)) ||
         (company.country && company.country.toLowerCase().includes(query))
@@ -161,7 +161,7 @@ const SavedCompaniesPage = () => {
 
     // Then sort based on selected option
     const [field, order] = sortOption.split('-');
-    return [...filtered].sort((a, b) => {
+    return [...filtered].sort((a: Company, b: Company) => {
       let valA = a[field as keyof Company] || '';
       let valB = b[field as keyof Company] || '';
       
@@ -340,7 +340,7 @@ const SavedCompaniesPage = () => {
 
           {filteredAndSortedCompanies.length > 0 ? (
             <div className={`saved-companies-${viewMode}`}>
-              {filteredAndSortedCompanies.map(company => (
+              {filteredAndSortedCompanies.map((company: Company) => (
                 <div key={company.id} className="company-card-wrapper">
                   <CompanyCard
                     company={company}

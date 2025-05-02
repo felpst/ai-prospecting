@@ -1,3 +1,4 @@
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Company, CompanyAPI } from '../services/api';
@@ -22,7 +23,7 @@ interface EnrichmentError {
   technicalDetails?: string;
 }
 
-const CompanyDetailsPage = () => {
+const CompanyDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [company, setCompany] = useState<Company | null>(null);

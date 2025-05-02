@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CompanyAPI, CompanySearchParams, Company, SavedCompaniesAPI } from '../services/api';
 import SearchHeader from '../components/SearchHeader';
@@ -71,7 +71,7 @@ const parseSearchParams = (searchParams: URLSearchParams): CompanySearchParams =
   return params;
 };
 
-const HomePage = () => {
+const HomePage: React.FC = () => {
   // State to track active tab
   const [activeTab, setActiveTab] = useState<'discover' | 'saved'>('discover');
   
@@ -201,7 +201,7 @@ const HomePage = () => {
   const handleSaveCompany = async (id: string) => {
     try {
       await SavedCompaniesAPI.saveCompany(id);
-      setSavedCompanyIds(prev => [...prev, id]);
+      setSavedCompanyIds((prev: string[]) => [...prev, id]);
       // Refresh saved companies if we're in the saved tab
       if (activeTab === 'saved') {
         fetchSavedCompanies();
@@ -216,10 +216,10 @@ const HomePage = () => {
   const handleUnsaveCompany = async (id: string) => {
     try {
       await SavedCompaniesAPI.unsaveCompany(id);
-      setSavedCompanyIds(prev => prev.filter(savedId => savedId !== id));
+      setSavedCompanyIds((prev: string[]) => prev.filter((savedId: string) => savedId !== id));
       // If in saved tab, also remove from the list
       if (activeTab === 'saved') {
-        setSavedCompanies(prev => prev.filter(company => company.id !== id));
+        setSavedCompanies((prev: Company[]) => prev.filter((company: Company) => company.id !== id));
       }
     } catch (err) {
       console.error('Error removing saved company:', err);
@@ -340,7 +340,7 @@ const HomePage = () => {
     // Apply search query filter
     if (searchQuerySaved.trim() !== '') {
       const query = searchQuerySaved.toLowerCase();
-      filtered = filtered.filter(company => 
+      filtered = filtered.filter((company: Company) => 
         company.name.toLowerCase().includes(query) ||
         (company.industry && company.industry.toLowerCase().includes(query)) ||
         (company.country && company.country.toLowerCase().includes(query))
@@ -349,48 +349,48 @@ const HomePage = () => {
     
     // Apply industry filter
     if (paramsRef.current.industry) {
-      filtered = filtered.filter(company => 
+      filtered = filtered.filter((company: Company) => 
         company.industry && company.industry.toLowerCase() === paramsRef.current.industry?.toLowerCase()
       );
     }
     
     // Apply country filter
     if (paramsRef.current.country) {
-      filtered = filtered.filter(company => 
+      filtered = filtered.filter((company: Company) => 
         company.country && company.country.toLowerCase() === paramsRef.current.country?.toLowerCase()
       );
     }
     
     // Apply region filter
     if (paramsRef.current.region) {
-      filtered = filtered.filter(company => 
+      filtered = filtered.filter((company: Company) => 
         company.region && company.region.toLowerCase().includes(paramsRef.current.region?.toLowerCase() || '')
       );
     }
     
     // Apply company size filter
     if (paramsRef.current.size) {
-      filtered = filtered.filter(company => 
+      filtered = filtered.filter((company: Company) => 
         company.size === paramsRef.current.size
       );
     }
     
     // Apply founded year range filter
     if (paramsRef.current.foundedMin) {
-      filtered = filtered.filter(company => 
+      filtered = filtered.filter((company: Company) => 
         company.founded && company.founded >= (paramsRef.current.foundedMin || 0)
       );
     }
     
     if (paramsRef.current.foundedMax) {
-      filtered = filtered.filter(company => 
+      filtered = filtered.filter((company: Company) => 
         company.founded && company.founded <= (paramsRef.current.foundedMax || 9999)
       );
     }
 
     // Then sort based on selected option
     const { sort, order } = getSavedSortInfo();
-    return [...filtered].sort((a, b) => {
+    return [...filtered].sort((a: Company, b: Company) => {
       let valA = a[sort as keyof Company] || '';
       let valB = b[sort as keyof Company] || '';
       

@@ -3,6 +3,8 @@ import { ApiError } from '../utils/errorHandler.js';
 import companiesRoutes from './companies.js';
 import savedRoutes from './saved.js';
 import dataRoutes from './data.js';
+import searchRoutes from './search.routes.js';
+import adminRoutes from './admin.routes.js';
 
 /**
  * Setup all API routes
@@ -15,6 +17,8 @@ export const setupRoutes = (app) => {
   apiRouter.use('/companies', companiesRoutes);
   apiRouter.use('/saved', savedRoutes);
   apiRouter.use('/data', dataRoutes);
+  apiRouter.use('/search', searchRoutes);
+  apiRouter.use('/admin', adminRoutes);
   
   // Root API endpoint
   apiRouter.get('/', (req, res) => {
@@ -35,5 +39,10 @@ export const setupRoutes = (app) => {
   // Handle 404 for all other routes
   app.use('*', (req, res) => {
     res.status(404).json({ error: { message: 'Resource not found' } });
+  });
+  
+  // Root route redirect to API
+  app.get('/', (req, res) => {
+    res.redirect('/api');
   });
 }; 
