@@ -43,6 +43,22 @@ export const getSavedCompanies = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Check if a company is saved
+ * @route GET /api/saved/:companyId/check
+ */
+export const checkIfSaved = asyncHandler(async (req, res) => {
+  const { companyId } = req.params;
+  const user = await getOrCreateUser();
+  
+  const isSaved = user.saved_companies.includes(companyId);
+  
+  res.json({
+    isSaved,
+    companyId
+  });
+});
+
+/**
  * Save a company
  * @route POST /api/saved/:companyId
  */
