@@ -25,7 +25,7 @@
 .company-list-item .company-card {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   padding: 1rem;
 }
 
@@ -38,18 +38,50 @@
 .company-list-item .company-card-content {
   display: flex;
   flex: 1;
-  flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 }
 
 .company-list-item .company-card-info {
-  flex: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.company-list-item .company-body .company-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: flex-start;
+  margin-top: 0.75rem;
+}
+
+.company-list-item .company-body .company-grid .info-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.company-list-item .company-body .company-grid .info-item span:first-child {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+
+.company-list-item .company-body .company-grid .info-item span:last-child {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
 }
 
 .company-list-item .company-card-actions {
+  flex-shrink: 0;
   margin-top: 0;
   margin-left: 1rem;
+  display: flex;
+  align-items: center;
 }
 
 .company-grid-loading,

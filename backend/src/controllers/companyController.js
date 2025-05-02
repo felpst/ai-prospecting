@@ -36,7 +36,10 @@ export const getCompanies = asyncHandler(async (req, res) => {
     const sortOptions = buildSortOptions(req.query);
     
     // Determine if we should use cursor-based pagination for better performance
-    if (shouldUseCursorPagination(req.query)) {
+    // ONLY use cursor pagination if a cursor parameter is actually present in the request
+    const useCursor = shouldUseCursorPagination(req.query) && (req.query.next_cursor || req.query.prev_cursor);
+
+    if (useCursor) {
       // Extract cursor information from request
       const cursorInfo = extractCursorInfo(req);
       
@@ -46,11 +49,26 @@ export const getCompanies = asyncHandler(async (req, res) => {
         filter,
         sortOptions,
         cursorInfo,
-        { count: req.query.count === 'true' } // Only count when explicitly requested
+        { count: true } // Ensure count is always requested for total
       );
       
-      // Format response with pagination links
-      const paginationData = formatPaginationLinks(req, pagination);
+      // Get total (which is returned as 'count' by cursorPaginate) and calculate pages
+      const total = pagination.count || 0;
+      const limitNum = parseInt(cursorInfo.limit || '20', 10);
+      const totalPages = Math.ceil(total / limitNum);
+      const currentPage = parseInt(req.query.page || '1', 10); // Get current page from request
+      
+      // Format response with pagination links AND total count info
+      const linksData = formatPaginationLinks(req, pagination);
+      
+      // Construct the pagination object required by the frontend
+      const paginationMetadata = {
+        total,
+        page: currentPage,
+        limit: limitNum,
+        pages: totalPages,
+        has_more: pagination.has_more // Keep has_more if needed elsewhere
+      };
       
       // Calculate query execution time
       const executionTime = Date.now() - startTime;
@@ -63,11 +81,11 @@ export const getCompanies = asyncHandler(async (req, res) => {
       res.set('X-Response-Time', `${executionTime}ms`);
       res.set('X-Pagination-Type', 'cursor');
       
-      // Send JSON response
+      // Send JSON response with correct pagination structure
       res.json({
         companies: results,
-        pagination: paginationData.meta,
-        links: paginationData.links,
+        pagination: paginationMetadata, // Use the new metadata object
+        links: linksData.links, // Keep the cursor links
         meta: {
           filters: req.query,
           executionTime: `${executionTime}ms`
