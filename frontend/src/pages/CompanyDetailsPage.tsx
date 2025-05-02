@@ -15,6 +15,13 @@ import {
 } from '../utils/formatters';
 import './CompanyDetailsPage.css';
 
+// Define interface for enrichment error details
+interface EnrichmentError {
+  message: string;
+  category?: string;
+  technicalDetails?: string;
+}
+
 const CompanyDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -24,7 +31,7 @@ const CompanyDetailsPage = () => {
   
   // Enrichment state
   const [isEnriching, setIsEnriching] = useState<boolean>(false);
-  const [enrichmentError, setEnrichmentError] = useState<string | null>(null);
+  const [enrichmentError, setEnrichmentError] = useState<EnrichmentError | null>(null);
 
   useEffect(() => {
     const fetchCompanyDetails = async () => {
@@ -95,17 +102,44 @@ const CompanyDetailsPage = () => {
       // Clear cache and update local state
       clearCompanyCache(id);
       
-      if (response && response.company) {
-        setCompany(response.company);
+      if (response && response.success && response.enrichment) {
+        // Create updated company object with enrichment data
+        const updatedCompany = {
+          ...company,
+          enrichment: response.enrichment.summary,
+          last_enriched: response.enrichment.timestamp
+        };
+        
+        setCompany(updatedCompany);
       } else {
         throw new Error('Invalid response from enrichment service');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error enriching company:', err);
-      setEnrichmentError('Failed to enrich company data. Please try again later.');
+      
+      // Handle API error response with detailed information
+      if (err.response?.data) {
+        const errorData = err.response.data;
+        setEnrichmentError({
+          message: errorData.error?.message || errorData.message || 'Failed to enrich company data. Please try again later.',
+          category: errorData.error?.category || 'general_error',
+          technicalDetails: errorData.error?.technicalDetails
+        });
+      } else {
+        setEnrichmentError({
+          message: 'Failed to enrich company data. Please try again later.',
+          category: 'network_error'
+        });
+      }
     } finally {
       setIsEnriching(false);
     }
+  };
+
+  // Handle retry for enrichment errors
+  const handleRetryEnrichment = () => {
+    setEnrichmentError(null);
+    handleEnrichCompany();
   };
 
   if (loading) {
@@ -252,7 +286,19 @@ const CompanyDetailsPage = () => {
           
           {enrichmentError && (
             <div className="enrichment-error">
-              <p>{enrichmentError}</p>
+              <p className="error-message">{enrichmentError.message}</p>
+              {enrichmentError.technicalDetails && (
+                <details>
+                  <summary>Technical Details</summary>
+                  <p className="technical-details">{enrichmentError.technicalDetails}</p>
+                </details>
+              )}
+              <button 
+                className="retry-button"
+                onClick={handleRetryEnrichment}
+              >
+                Try Again
+              </button>
             </div>
           )}
           

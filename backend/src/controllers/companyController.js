@@ -8,6 +8,9 @@ import {
 } from '../utils/queryBuilder.js';
 import * as companyService from '../services/companyService.js';
 import * as enrichmentService from '../services/enrichmentService.js';
+import * as scraperService from '../services/scraperService.js';
+import * as storageService from '../services/storageService.js';
+import * as llmService from '../services/llmService.js';
 
 /**
  * Get paginated companies with filters
@@ -130,36 +133,203 @@ export const getCompanyById = asyncHandler(async (req, res) => {
  * @route POST /api/companies/:id/enrich
  */
 export const enrichCompany = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const startTime = Date.now();
+  console.log(`[API] POST /api/companies/${id}/enrich - Starting enrichment process`);
+
+  // 1. Get the company data
+  const company = await Company.findOne({ id });
+  if (!company) {
+    console.log(`[API] Company not found for enrichment: ${id}`);
+    throw new ApiError(`Company with ID ${id} not found`, 404);
+  }
+
+  // 2. Check for website URL or LinkedIn URL
+  if (!company.website && !company.linkedin_url) {
+    console.log(`[API] Company ${id} (${company.name}) has no website or LinkedIn URL. Cannot enrich.`);
+    throw new ApiError(`Company ${id} has no website or LinkedIn URL for enrichment`, 422); // Unprocessable Entity
+  }
+
+  let scrapedContentData;
+  let scrapeSource = 'cache';
+  let errorDetails = null;
+
   try {
-    const { id } = req.params;
+    // Use website if available, otherwise try to use LinkedIn
+    const primaryUrl = company.website || company.linkedin_url;
+    const sourceType = company.website ? 'website' : 'linkedin';
     
-    console.log(`[API] POST /api/companies/${id}/enrich`);
-    
-    // Get the company
-    const company = await Company.findOne({ id });
-    
-    if (!company) {
-      console.log(`[API] Company not found for enrichment: ${id}`);
-      throw new ApiError(`Company with ID ${id} not found`, 404);
+    // 3. Check for recently scraped content in storage
+    console.log(`[Enrich] Checking for cached scraped content for ${primaryUrl}`);
+    const recentContent = await storageService.getScrapedContent(primaryUrl);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    if (recentContent && recentContent.scrapeDate > thirtyDaysAgo) {
+      console.log(`[Enrich] Using cached content scraped on ${recentContent.scrapeDate.toISOString()}`);
+      scrapedContentData = recentContent; // Use the stored content object
+    } else {
+      // 4. If no recent content, trigger web scraper
+      scrapeSource = 'live_scrape';
+      console.log(`[Enrich] No recent cached content found. Starting live scrape for ${primaryUrl} (type: ${sourceType})`);
+      
+      // Include LinkedIn URL if website is primary source
+      const scrapeOptions = {
+        saveToStorage: true,
+        companyId: company.id,
+        linkedinUrl: company.linkedin_url || null
+      };
+      
+      // If LinkedIn is primary source, adjust behavior
+      let scrapeTarget = primaryUrl;
+      
+      if (sourceType === 'linkedin') {
+        console.log(`[Enrich] Using LinkedIn as primary source for ${company.name}`);
+        scrapeOptions.isLinkedInPrimary = true;
+        // For LinkedIn-only scraping we create a mock object for the website content
+        // but include LinkedIn data from direct scraping
+        const linkedInScrapeResult = await scraperService.scrapeLinkedInCompanyPage(primaryUrl);
+        
+        if (linkedInScrapeResult.error) {
+          console.error(`[Enrich] LinkedIn scraping failed for ${primaryUrl}: ${linkedInScrapeResult.message || 'Unknown error'}`);
+          throw new ApiError(`Failed to scrape LinkedIn profile: ${linkedInScrapeResult.message || 'Unknown error'}`, 500);
+        }
+        
+        // Store LinkedIn data directly
+        const mockWebsiteContent = {
+          url: company.linkedin_url,
+          title: `${company.name} - LinkedIn Profile`,
+          mainContent: linkedInScrapeResult.description || `LinkedIn profile for ${company.name}`,
+          aboutInfo: linkedInScrapeResult.description || '',
+          productInfo: linkedInScrapeResult.specialties || '',
+          teamInfo: '',
+          contactInfo: '',
+          linkedinData: linkedInScrapeResult,
+          scrapedAt: new Date().toISOString(),
+          duration: 0
+        };
+        
+        // Save the mock website content to storage
+        await storageService.saveScrapedContent(
+          {
+            url: company.linkedin_url,
+            title: mockWebsiteContent.title,
+            mainContent: mockWebsiteContent.mainContent,
+            aboutInfo: mockWebsiteContent.aboutInfo,
+            productInfo: mockWebsiteContent.productInfo,
+            teamInfo: mockWebsiteContent.teamInfo,
+            contactInfo: mockWebsiteContent.contactInfo,
+            linkedinData: linkedInScrapeResult,
+            rawHtml: ''
+          },
+          {
+            statusCode: 200,
+            scrapeDuration: 0,
+            companyId: company.id
+          }
+        );
+        
+        // Update status to processed
+        await storageService.updateScrapedContentStatus(company.linkedin_url, 'processed');
+        
+        // Get the saved content
+        scrapedContentData = await storageService.getScrapedContent(company.linkedin_url);
+        if (!scrapedContentData) {
+          throw new ApiError(`Failed to retrieve LinkedIn scraped content for ${company.name}`, 500);
+        }
+        
+        console.log(`[Enrich] Successfully created content from LinkedIn data for ${company.name}`);
+      } else {
+        // Standard website scraping
+        const scrapeResult = await scraperService.scrapeCompanyWebsite(scrapeTarget, scrapeOptions);
+
+        if (scrapeResult.error) {
+          console.error(`[Enrich] Scraping failed for ${scrapeTarget}: ${scrapeResult.error.message}`);
+          
+          // Map error category to user-friendly message
+          const errorCategory = scrapeResult.error.category || 'general_error';
+          const userFriendlyMessages = {
+            'website_access_denied': `The website for "${company.name}" (${scrapeTarget}) is blocking access. This is common for websites with sophisticated security.`,
+            'website_timeout': `The website for "${company.name}" (${scrapeTarget}) took too long to respond. The site may be temporarily down or experiencing issues.`,
+            'website_not_found': `The website for "${company.name}" (${scrapeTarget}) could not be found. The URL may be incorrect or the site may no longer exist.`,
+            'network_error': `A network error occurred while trying to access "${company.name}" website (${scrapeTarget}). Please check your connection and try again.`,
+            'invalid_url': `The URL for "${company.name}" (${scrapeTarget}) appears to be invalid. Please update the company record with a valid website URL.`,
+            'general_error': `An error occurred while scraping the website for "${company.name}" (${scrapeTarget}). The site may have protection against automated access.`
+          };
+          
+          errorDetails = {
+            message: userFriendlyMessages[errorCategory] || scrapeResult.error.message,
+            category: errorCategory,
+            technicalDetails: scrapeResult.error.message
+          };
+          
+          throw new ApiError(`Failed to scrape ${sourceType} ${scrapeTarget}: ${scrapeResult.error.message}`, 500);
+        }
+
+        console.log(`[Enrich] Live scrape successful for ${scrapeTarget}`);
+        // Retrieve the newly saved content to have the full object
+        scrapedContentData = await storageService.getScrapedContent(scrapeTarget);
+        if (!scrapedContentData) {
+           // Should not happen if scrape succeeded and saved, but handle defensively
+           throw new ApiError(`Failed to retrieve newly scraped content for ${scrapeTarget}`, 500);
+        }
+      }
     }
 
-    // TODO: Implement actual enrichment with web scraping and AI in a future task
-    // For now, we'll just return a placeholder response
-    
-    // Update the company with a placeholder enrichment
-    company.enrichment = `This is a placeholder AI-generated summary for ${company.name}. The actual implementation will be added in a future task.`;
+    // Ensure scrapedContentData is valid before proceeding
+    if (!scrapedContentData) {
+      throw new ApiError('Failed to obtain scraped content for enrichment', 500);
+    }
+
+    // 5. Call the LLM service to generate the summary
+    console.log(`[Enrich] Calling LLM service for company ${id} using content from ${scrapeSource}`);
+    const generatedSummary = await llmService.generateCompanySummary(
+      company.toObject(), // Pass basic company data
+      scrapedContentData.toObject() // Pass the scraped content object
+    );
+
+    // 6. Update the company with the actual enrichment result and timestamp
+    console.log(`[Enrich] Storing generated summary for company ${id}`);
+    company.enrichment = generatedSummary;
     company.last_enriched = new Date();
-    
     await company.save();
-    
-    console.log(`[API] Enrichment completed for company: ${id}`);
-    
-    res.json({
-      message: 'Company enriched successfully',
-      company
+
+    const executionTime = Date.now() - startTime;
+    console.log(`[API] Enrichment process for company ${id} completed in ${executionTime}ms`);
+
+    // 7. Return 200 OK with the result (since it's synchronous for now)
+    res.status(200).json({
+      success: true,
+      message: 'Company enrichment successful.',
+      companyId: id,
+      scrapeSource,
+      dataSource: sourceType,
+      enrichment: {
+        summary: company.enrichment,
+        timestamp: company.last_enriched
+      }
     });
+
   } catch (error) {
-    console.error(`[ERROR] Company enrichment failed: ${error.message}`);
-    throw error;
+    const executionTime = Date.now() - startTime;
+    console.error(`[ERROR] Company enrichment failed for ${id} after ${executionTime}ms: ${error.message}`);
+    
+    // Add more detailed error reporting
+    const detailedError = {
+      success: false,
+      message: 'Failed to enrich company data. Please try again later.',
+      error: errorDetails || { 
+        message: error.message,
+        category: error.cause?.category || 'general_error'
+      },
+      companyId: id,
+      executionTime
+    };
+    
+    // Send a more detailed error response for frontend consumption
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json(detailedError);
+    } else {
+      res.status(500).json(detailedError);
+    }
   }
 }); 

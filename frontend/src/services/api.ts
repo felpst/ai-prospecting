@@ -41,6 +41,26 @@ export interface Company {
   last_enriched?: string;
 }
 
+// Interface for enrichment error response
+export interface EnrichmentError {
+  message: string;
+  category?: string;
+  technicalDetails?: string;
+}
+
+// Interface for enrichment response
+export interface EnrichmentResponse {
+  success: boolean;
+  message: string;
+  companyId: string;
+  scrapeSource?: string;
+  enrichment?: {
+    summary: string;
+    timestamp: string;
+  };
+  error?: EnrichmentError;
+}
+
 // API functions
 export const CompanyAPI = {
   // Get companies with search filtering
@@ -56,7 +76,7 @@ export const CompanyAPI = {
   },
 
   // Request AI enrichment for a company
-  enrichCompany: async (id: string) => {
+  enrichCompany: async (id: string): Promise<EnrichmentResponse> => {
     const response = await api.post(`/companies/${id}/enrich`);
     return response.data;
   }
@@ -89,6 +109,12 @@ api.interceptors.response.use(
   (error) => {
     // Handle error or pass it along
     console.error('API Error:', error.response?.data || error.message);
+    
+    // Preserve the original error with the response data for better error handling
+    if (error.response?.data) {
+      error.responseData = error.response.data;
+    }
+    
     return Promise.reject(error);
   }
 );
