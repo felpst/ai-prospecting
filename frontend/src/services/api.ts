@@ -39,6 +39,8 @@ export interface Company {
   linkedin_url?: string;
   enrichment?: string;
   last_enriched?: string;
+  location?: string;
+  hasEnrichment?: boolean;
 }
 
 // Interface for enrichment error response
@@ -65,20 +67,60 @@ export interface EnrichmentResponse {
 export const CompanyAPI = {
   // Get companies with search filtering
   searchCompanies: async (params: CompanySearchParams) => {
-    const response = await api.get('/companies', { params });
-    return response.data;
+    try {
+      const response = await api.get('/companies', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error in searchCompanies:', error);
+      throw error;
+    }
   },
 
   // Get a single company by ID
   getCompany: async (id: string) => {
-    const response = await api.get(`/companies/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/companies/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error in getCompany:', error);
+      throw error;
+    }
   },
 
   // Request AI enrichment for a company
   enrichCompany: async (id: string): Promise<EnrichmentResponse> => {
-    const response = await api.post(`/companies/${id}/enrich`);
-    return response.data;
+    try {
+      const response = await api.post(`/companies/${id}/enrich`);
+      return response.data;
+    } catch (error) {
+      console.error('Error in enrichCompany:', error);
+
+      let errorMessage = 'Failed to enrich company data. Please try again.';
+      let technicalDetails = error instanceof Error ? error.message : 'Unknown error';
+      let errorCategory = 'unknown_error';
+      
+      // Check if it's an Axios error with a response from the backend
+      if (axios.isAxiosError(error) && error.response && error.response.data) {
+        const backendError = error.response.data.error;
+        errorMessage = error.response.data.message || errorMessage;
+        if (backendError) {
+          technicalDetails = backendError.technicalDetails || backendError.message || technicalDetails;
+          errorCategory = backendError.category || errorCategory;
+        }
+      }
+      
+      // Return a structured error compatible with EnrichmentResponse
+      return {
+        success: false,
+        message: errorMessage, // Use the more specific message from backend if available
+        companyId: id,
+        error: {
+          message: errorMessage, // Keep the main message user-friendly
+          category: errorCategory,
+          technicalDetails: technicalDetails // Pass the detailed technical info
+        }
+      };
+    }
   }
 };
 
@@ -86,20 +128,35 @@ export const CompanyAPI = {
 export const SavedCompaniesAPI = {
   // Get all saved companies
   getSavedCompanies: async () => {
-    const response = await api.get('/saved');
-    return response.data;
+    try {
+      const response = await api.get('/saved');
+      return response.data;
+    } catch (error) {
+      console.error('Error in getSavedCompanies:', error);
+      throw error;
+    }
   },
 
   // Save a company
   saveCompany: async (companyId: string) => {
-    const response = await api.post(`/saved/${companyId}`);
-    return response.data;
+    try {
+      const response = await api.post(`/saved/${companyId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error in saveCompany:', error);
+      throw error;
+    }
   },
 
   // Remove a company from saved list
   unsaveCompany: async (companyId: string) => {
-    const response = await api.delete(`/saved/${companyId}`);
-    return response.data;
+    try {
+      const response = await api.delete(`/saved/${companyId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error in unsaveCompany:', error);
+      throw error;
+    }
   }
 };
 

@@ -9,6 +9,7 @@ interface SearchResultsProps {
   isLoading: boolean;
   error?: string;
   onSaveCompany?: (id: string) => void;
+  onUnsaveCompany?: (id: string) => void;
   savedCompanies?: string[];
 }
 
@@ -18,6 +19,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   isLoading,
   error,
   onSaveCompany,
+  onUnsaveCompany,
   savedCompanies = []
 }) => {
   // Loading state
@@ -77,6 +79,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             <CompanyCard
               company={company}
               onSave={onSaveCompany}
+              onUnsave={onUnsaveCompany}
               isSaved={savedCompanies.includes(company.id)}
             />
           </Link>

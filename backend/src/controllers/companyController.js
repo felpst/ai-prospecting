@@ -11,6 +11,7 @@ import * as enrichmentService from '../services/enrichmentService.js';
 import * as scraperService from '../services/scraperService.js';
 import * as storageService from '../services/storageService.js';
 import * as llmService from '../services/llmService.js';
+import logger from '../utils/logger.js';
 
 /**
  * Get paginated companies with filters
@@ -244,34 +245,87 @@ export const enrichCompany = asyncHandler(async (req, res) => {
         const scrapeResult = await scraperService.scrapeCompanyWebsite(scrapeTarget, scrapeOptions);
 
         if (scrapeResult.error) {
-          console.error(`[Enrich] Scraping failed for ${scrapeTarget}: ${scrapeResult.error.message}`);
+          console.warn(`[Enrich] Website scraping failed for ${scrapeTarget}: ${scrapeResult.error.message}`);
           
-          // Map error category to user-friendly message
-          const errorCategory = scrapeResult.error.category || 'general_error';
-          const userFriendlyMessages = {
-            'website_access_denied': `The website for "${company.name}" (${scrapeTarget}) is blocking access. This is common for websites with sophisticated security.`,
-            'website_timeout': `The website for "${company.name}" (${scrapeTarget}) took too long to respond. The site may be temporarily down or experiencing issues.`,
-            'website_not_found': `The website for "${company.name}" (${scrapeTarget}) could not be found. The URL may be incorrect or the site may no longer exist.`,
-            'network_error': `A network error occurred while trying to access "${company.name}" website (${scrapeTarget}). Please check your connection and try again.`,
-            'invalid_url': `The URL for "${company.name}" (${scrapeTarget}) appears to be invalid. Please update the company record with a valid website URL.`,
-            'general_error': `An error occurred while scraping the website for "${company.name}" (${scrapeTarget}). The site may have protection against automated access.`
-          };
-          
-          errorDetails = {
-            message: userFriendlyMessages[errorCategory] || scrapeResult.error.message,
-            category: errorCategory,
-            technicalDetails: scrapeResult.error.message
-          };
-          
-          throw new ApiError(`Failed to scrape ${sourceType} ${scrapeTarget}: ${scrapeResult.error.message}`, 500);
-        }
-
-        console.log(`[Enrich] Live scrape successful for ${scrapeTarget}`);
-        // Retrieve the newly saved content to have the full object
-        scrapedContentData = await storageService.getScrapedContent(scrapeTarget);
-        if (!scrapedContentData) {
-           // Should not happen if scrape succeeded and saved, but handle defensively
-           throw new ApiError(`Failed to retrieve newly scraped content for ${scrapeTarget}`, 500);
+          // Website failed, check if LinkedIn URL exists as a fallback
+          if (company.linkedin_url) {
+            console.log(`[Enrich] Website scrape failed. Attempting fallback to LinkedIn: ${company.linkedin_url}`);
+            scrapeSource = 'live_scrape_linkedin_fallback'; // Indicate fallback source
+            dataSource = 'linkedin'; // Update dataSource
+            
+            const linkedInScrapeResult = await scraperService.scrapeLinkedInCompanyPage(company.linkedin_url);
+            
+            if (linkedInScrapeResult.error) {
+              console.error(`[Enrich] Fallback LinkedIn scraping failed for ${company.linkedin_url}: ${linkedInScrapeResult.message || 'Unknown error'}`);
+              // Both website and LinkedIn failed
+              errorDetails = {
+                message: `Failed to enrich "${company.name}". Could not access website (${scrapeTarget}) or LinkedIn profile (${company.linkedin_url}).`,
+                category: 'no_enrichable_source',
+                technicalDetails: `Website error: ${scrapeResult.error.message}; LinkedIn error: ${linkedInScrapeResult.message || 'Unknown error'}`
+              };
+              throw new ApiError(errorDetails.message, 500); // Throw combined failure
+            } else {
+              // LinkedIn fallback succeeded, construct content data
+              console.log(`[Enrich] Fallback LinkedIn scrape successful for ${company.name}`);
+              const mockWebsiteContent = {
+                url: company.linkedin_url,
+                title: `${company.name} - LinkedIn Profile`,
+                 mainContent: linkedInScrapeResult.description || `LinkedIn profile for ${company.name}`,
+                 aboutInfo: linkedInScrapeResult.description || '',
+                 productInfo: linkedInScrapeResult.specialties || '',
+                 teamInfo: '',
+                 contactInfo: '',
+                 linkedinData: linkedInScrapeResult,
+                 scrapedAt: new Date().toISOString(),
+                 duration: 0
+              };
+              // Save this synthesized content
+              await storageService.saveScrapedContent(
+                {
+                  url: company.linkedin_url, // Save under LinkedIn URL for cache consistency
+                  title: mockWebsiteContent.title,
+                  mainContent: mockWebsiteContent.mainContent,
+                  aboutInfo: mockWebsiteContent.aboutInfo,
+                  productInfo: mockWebsiteContent.productInfo,
+                  teamInfo: mockWebsiteContent.teamInfo,
+                  contactInfo: mockWebsiteContent.contactInfo,
+                  linkedinData: linkedInScrapeResult,
+                  rawHtml: '' 
+                },
+                { statusCode: 200, scrapeDuration: 0, companyId: company.id }
+              );
+              await storageService.updateScrapedContentStatus(company.linkedin_url, 'processed');
+              scrapedContentData = await storageService.getScrapedContent(company.linkedin_url);
+              if (!scrapedContentData) {
+                 throw new ApiError(`Failed to retrieve LinkedIn fallback content for ${company.name}`, 500);
+              }
+            }
+          } else {
+            // Website failed and no LinkedIn URL available
+            console.error(`[Enrich] Website scraping failed for ${scrapeTarget} and no LinkedIn URL available.`);
+            const errorCategory = scrapeResult.error.category || 'general_error';
+            const userFriendlyMessages = {
+              'website_access_denied': `The website for "${company.name}" (${scrapeTarget}) is blocking access. Enrichment requires website or LinkedIn access.`,
+              'website_timeout': `The website for "${company.name}" (${scrapeTarget}) took too long to respond. Enrichment requires website or LinkedIn access.`,
+              'website_not_found': `The website for "${company.name}" (${scrapeTarget}) could not be found. Enrichment requires a valid website or LinkedIn URL.`,
+              'network_error': `A network error occurred while trying to access "${company.name}" website (${scrapeTarget}). Please check your connection and try again.`,
+              'invalid_url': `The URL for "${company.name}" (${scrapeTarget}) appears to be invalid. Please update the company record with a valid website URL.`,
+              'general_error': `An error occurred while scraping the website for "${company.name}" (${scrapeTarget}). No LinkedIn profile available as fallback.`
+            };
+            errorDetails = {
+              message: userFriendlyMessages[errorCategory] || scrapeResult.error.message,
+              category: errorCategory,
+              technicalDetails: scrapeResult.error.message
+            };
+            throw new ApiError(`Failed to scrape ${sourceType} ${scrapeTarget}: ${scrapeResult.error.message}`, 500); // Throw original website error
+          }
+        } else {
+           // Website scrape was successful
+           console.log(`[Enrich] Live website scrape successful for ${scrapeTarget}`);
+           scrapedContentData = await storageService.getScrapedContent(scrapeTarget);
+           if (!scrapedContentData) {
+             throw new ApiError(`Failed to retrieve newly scraped content for ${scrapeTarget}`, 500);
+           }
         }
       }
     }
@@ -294,6 +348,10 @@ export const enrichCompany = asyncHandler(async (req, res) => {
       company.enrichment = generatedSummary;
       company.last_enriched = new Date();
       await company.save();
+      // Add confirmation logging
+      logger.info(`[Enrich] Successfully saved enrichment for company ${id}. Last enriched: ${company.last_enriched}`);
+      // Log the actual saved data for verification
+      // logger.debug('[Enrich] Saved company data with enrichment:', company.toObject()); 
 
       const executionTime = Date.now() - startTime;
       console.log(`[API] Enrichment process for company ${id} completed in ${executionTime}ms`);
@@ -312,7 +370,8 @@ export const enrichCompany = asyncHandler(async (req, res) => {
       });
     } catch (llmError) {
       // Handle LLM-specific errors
-      console.error(`[ERROR] LLM service error for company ${id}: ${llmError.message}`);
+      // Log the full error object for better debugging
+      console.error(`[ERROR] LLM service error for company ${id}:`, llmError);
       
       // Define LLM error categories and user-friendly messages
       let llmErrorCategory = 'llm_general_error';
@@ -361,26 +420,28 @@ export const enrichCompany = asyncHandler(async (req, res) => {
     }
   } catch (error) {
     const executionTime = Date.now() - startTime;
-    console.error(`[ERROR] Company enrichment failed for ${id} after ${executionTime}ms: ${error.message}`);
-    
-    // Add more detailed error reporting
+    console.error(`[ERROR] Company enrichment failed for ${id} after ${executionTime}ms: ${error.message}`, error.stack); // Add stack trace for better debugging
+
+    // Prioritize using errorDetails if it was populated by a specific failure (e.g., scraping)
+    const finalErrorDetails = errorDetails || {
+      message: error.message || 'An unknown error occurred during enrichment.',
+      category: error.cause?.category || (error instanceof ApiError ? 'api_error' : 'general_error'),
+      technicalDetails: error.stack // Include stack trace in technical details
+    };
+
+    // Construct the detailed error response
     const detailedError = {
       success: false,
-      message: 'Failed to enrich company data. Please try again later.',
-      error: errorDetails || { 
-        message: error.message,
-        category: error.cause?.category || 'general_error'
-      },
+      message: finalErrorDetails.message, // Use the refined message
+      error: finalErrorDetails, // Send the whole details object
       companyId: id,
-      dataSource,
+      dataSource, // Include dataSource if available
       executionTime
     };
-    
-    // Send a more detailed error response for frontend consumption
-    if (error instanceof ApiError) {
-      res.status(error.statusCode).json(detailedError);
-    } else {
-      res.status(500).json(detailedError);
-    }
+
+    // Send the detailed error response
+    // Use the status code from ApiError if available, otherwise default to 500
+    const statusCode = error instanceof ApiError ? error.statusCode : 500;
+    res.status(statusCode).json(detailedError);
   }
 }); 

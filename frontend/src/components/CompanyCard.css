@@ -1,109 +1,375 @@
 .company-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.3s ease;
+  background-color: var(--color-paper);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+  border: 1px solid var(--color-grey-200);
+  position: relative;
 }
 
 .company-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
+  border-color: var(--color-grey-300);
+  transform: none;
 }
 
 .company-card-header {
+  padding: 1.25rem 1.25rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  border-bottom: 1px solid var(--color-grey-100);
+}
+
+.company-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: calc(100% - 40px);
+}
+
+.company-logo {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-md);
+  color: white;
+  border-radius: var(--border-radius-md);
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.company-logo-tech {
+  background-color: #2196F3;
+}
+
+.company-logo-healthcare {
+  background-color: #F44336;
+}
+
+.company-logo-education {
+  background-color: #4CAF50;
+}
+
+.company-logo-financial {
+  background-color: #FF9800;
+}
+
+.company-logo-retail {
+  background-color: #673AB7;
+}
+
+.company-logo-furniture {
+  background-color: #9C27B0;
+}
+
+.company-logo-default {
+  background-color: #607D8B;
+}
+
+.company-title {
+  flex-grow: 1;
+  max-width: calc(100% - 50px);
+}
+
+.company-name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: 0.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.company-website {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  text-decoration: none;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.company-website:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.company-bookmark {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-grey-400);
+  transition: all 0.2s ease;
+  padding: 0.35rem;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 5;
+  background-color: transparent;
+}
+
+.company-bookmark:hover {
+  color: var(--color-warning);
+  background-color: var(--color-grey-100);
+  transform: none;
+}
+
+.company-bookmark.saved {
+  color: var(--color-warning);
+  background-color: transparent;
+}
+
+.company-bookmark.saved:hover {
+  color: var(--color-warning-dark);
+  background-color: var(--color-grey-100);
+}
+
+.company-body {
+  padding: 1rem 1.25rem 1.25rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.company-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-label {
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: var(--font-weight-medium);
+}
+
+.info-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.enrichment-summary {
+  background-color: var(--color-paper);
+  padding: 0 1.25rem;
+  border-radius: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  margin-top: auto;
+  border: none;
+  border-top: 1px solid var(--color-grey-100);
+  cursor: pointer;
+  position: relative;
+  box-shadow: none;
+}
+
+.enrichment-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+}
+
+.enrichment-summary.collapsed .enrichment-content {
+  display: none;
+}
+
+.enrichment-content {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.enrichment-content p {
+  margin: 0;
+  padding: 0;
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-medium);
+}
+
+.ai-icon {
+  color: var(--color-primary);
+}
+
+.expand-button {
+  background: transparent;
+  border: none;
+  color: var(--color-grey-500);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.expand-button:hover {
+  color: var(--color-text-primary);
+  background-color: transparent;
+}
+
+.generate-button {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background-color: var(--color-grey-100);
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: none;
+}
+
+.generate-button:hover {
+  background-color: var(--color-grey-200);
+  transform: none;
+  box-shadow: none;
+}
+
+.company-card-actions {
+  padding: 0.75rem 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  border-top: 1px solid var(--color-grey-100);
+  background-color: var(--color-grey-50);
+  margin-top: auto;
 }
 
-.company-card-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  color: #1a73e8;
-}
-
-.company-card-content {
-  margin-bottom: 16px;
-}
-
-.company-card-content p {
-  margin: 8px 0;
-  font-size: 0.9rem;
-}
-
-.company-card-enrichment {
-  border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
-  margin-top: 12px;
-}
-
-.company-card-enrichment h4 {
-  margin: 0 0 8px 0;
-  font-size: 1rem;
-  color: #555;
-}
-
-.company-card-enrichment small {
-  display: block;
-  margin-top: 8px;
-  color: #888;
-  font-size: 0.8rem;
-}
-
-.save-button {
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 6px 12px;
+.view-details-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  padding: 0.5rem 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease;
+  border-radius: 0;
+  transition: all var(--transition-fast);
+  text-decoration: none;
 }
 
-.save-button:hover {
-  background-color: #e8e8e8;
+.view-details-button:hover {
+  background-color: transparent;
+  color: var(--color-primary-dark);
 }
 
-.save-button.saved {
-  background-color: #e1f5fe;
-  border-color: #81d4fa;
-  color: #0288d1;
+.view-details-button svg {
+  transition: transform 0.2s ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  .company-card {
-    background-color: #2a2a2a;
-    border-color: #444;
+.view-details-button:hover svg {
+  transform: translateX(3px);
+}
+
+.linkedin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  width: 36px;
+  color: #0a66c2;
+  background-color: transparent;
+  border: 1px solid rgba(10, 102, 194, 0.2);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.linkedin-button:hover {
+  background-color: rgba(10, 102, 194, 0.05);
+  transform: none;
+}
+
+/* Loading state */
+.company-card-skeleton {
+  background-color: var(--color-paper);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-grey-200);
+}
+
+@media (max-width: 768px) {
+  .company-grid {
+    gap: 0.75rem;
+  }
+  
+  .company-card-header {
+    padding: 1rem 1rem 0.75rem;
+  }
+  
+  .company-body {
+    padding: 0.75rem 1rem 1rem;
+  }
+  
+  .company-card-actions {
+    padding: 0.75rem 1rem;
+  }
+  
+  .company-bookmark {
+    top: 1rem;
+    right: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
   }
 
-  .company-card-header h3 {
-    color: #60a5fa;
-  }
-
-  .company-card-enrichment {
-    border-color: #444;
-  }
-
-  .company-card-enrichment h4 {
-    color: #ccc;
-  }
-
-  .save-button {
-    background-color: #333;
-    border-color: #555;
-    color: #eee;
-  }
-
-  .save-button:hover {
-    background-color: #444;
-  }
-
-  .save-button.saved {
-    background-color: #1e3a5f;
-    border-color: #2c5282;
-    color: #90cdf4;
+  .company-bookmark {
+    top: 1.25rem;
+    right: 1.25rem;
   }
 } 

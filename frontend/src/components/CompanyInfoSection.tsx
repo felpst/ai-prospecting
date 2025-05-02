@@ -5,6 +5,7 @@ interface CompanyInfoSectionProps {
   title: string;
   children: React.ReactNode;
   className?: string;
+  titleAction?: React.ReactNode;
 }
 
 /**
@@ -13,11 +14,15 @@ interface CompanyInfoSectionProps {
 const CompanyInfoSection: React.FC<CompanyInfoSectionProps> = ({ 
   title, 
   children, 
-  className = '' 
+  className = '',
+  titleAction
 }) => {
   return (
     <section className={`details-section ${className}`}>
-      <h2 className="section-title">{title}</h2>
+      <div className="section-title">
+        <h2 className="section-title-text">{title}</h2>
+        {titleAction && <div className="section-title-action">{titleAction}</div>}
+      </div>
       <div className="section-content">
         {children}
       </div>

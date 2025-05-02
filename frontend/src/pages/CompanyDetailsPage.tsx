@@ -116,21 +116,27 @@ const CompanyDetailsPage = () => {
       }
     } catch (err: any) {
       console.error('Error enriching company:', err);
-      
-      // Handle API error response with detailed information
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        setEnrichmentError({
-          message: errorData.error?.message || errorData.message || 'Failed to enrich company data. Please try again later.',
-          category: errorData.error?.category || 'general_error',
-          technicalDetails: errorData.error?.technicalDetails
-        });
-      } else {
-        setEnrichmentError({
-          message: 'Failed to enrich company data. Please try again later.',
-          category: 'network_error'
-        });
+
+      let mainMessage = err?.message || 'Failed to enrich company data. Please try again.';
+      let techDetails = err?.error?.technicalDetails;
+      const category = err?.error?.category;
+
+      // Customize the main message for specific scraping failures
+      if (category === 'no_enrichable_source') {
+        mainMessage = `Enrichment failed: Could not access website or LinkedIn profile for "${company?.name || 'this company'}".`;
+      } else if (category?.startsWith('website_') || category === 'linkedin_scrape_failed') { // Handle other scrape errors
+        mainMessage = `Enrichment failed: Could not retrieve information from the company's web presence.`;
       }
+
+      // Provide a fallback for technical details if missing
+      if (!techDetails) {
+        techDetails = 'No specific technical details available from the backend.';
+      }
+
+      setEnrichmentError({
+        message: mainMessage,
+        technicalDetails: techDetails
+      });
     } finally {
       setIsEnriching(false);
     }
@@ -166,7 +172,15 @@ const CompanyDetailsPage = () => {
             ← Back to results
           </button>
         </div>
-        <ErrorMessage message={error} onAction={handleRetry} />
+        <ErrorMessage 
+          message={error} 
+          actions={[
+            {
+              text: 'Try Again',
+              onClick: handleRetry
+            }
+          ]}
+        />
       </div>
     );
   }

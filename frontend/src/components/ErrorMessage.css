@@ -3,44 +3,117 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  background-color: #fff5f5;
-  border: 1px solid #ffcccc;
-  border-radius: 8px;
+  padding: var(--spacing-lg);
+  background-color: var(--color-paper);
+  border: 1px solid var(--color-error-light);
+  border-left: 5px solid var(--color-error);
+  border-radius: var(--border-radius-md);
   text-align: center;
-  max-width: 500px;
+  max-width: 600px;
   margin: 0 auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.error-container.warning {
+  border-color: var(--color-warning-light);
+  border-left-color: var(--color-warning);
+}
+
+.error-container.info {
+  border-color: var(--color-primary-light);
+  border-left-color: var(--color-primary);
+}
+
+.error-container.inline {
+  flex-direction: row;
+  text-align: left;
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+}
+
+.error-container.small {
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
 }
 
 .error-icon {
-  color: #e53e3e;
-  margin-bottom: 1rem;
+  color: var(--color-error);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-container.warning .error-icon {
+  color: var(--color-warning);
+}
+
+.error-container.info .error-icon {
+  color: var(--color-primary);
+}
+
+.error-container.inline .error-icon {
+  margin-bottom: 0;
 }
 
 .error-title {
-  color: #e53e3e;
+  color: var(--color-error);
   margin-top: 0;
-  margin-bottom: 0.5rem;
-  font-size: 1.2rem;
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.error-container.warning .error-title {
+  color: var(--color-warning-dark);
+}
+
+.error-container.info .error-title {
+  color: var(--color-primary-dark);
 }
 
 .error-message {
-  color: var(--color-text);
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-md);
   line-height: 1.5;
+  max-width: 500px;
+}
+
+.error-technical {
+  background-color: var(--color-grey-50);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-lg);
+  max-width: 100%;
+  overflow-x: auto;
+  text-align: left;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-grey-200);
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .error-action {
   background-color: var(--color-primary);
   color: white;
   border: none;
-  border-radius: 4px;
-  padding: 0.5rem 1.5rem;
-  font-size: 0.9rem;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-short);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 .error-action:hover {
@@ -50,4 +123,44 @@
 .error-action:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.error-action.secondary {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.error-action.secondary:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .error-container {
+    background-color: rgba(229, 57, 53, 0.05);
+    border-color: rgba(229, 57, 53, 0.3);
+  }
+  
+  .error-container.warning {
+    background-color: rgba(255, 152, 0, 0.05);
+    border-color: rgba(255, 152, 0, 0.3);
+  }
+  
+  .error-container.info {
+    background-color: rgba(26, 115, 232, 0.05);
+    border-color: rgba(26, 115, 232, 0.3);
+  }
+  
+  .error-technical {
+    background-color: rgba(66, 66, 66, 0.5);
+    border-color: var(--color-grey-800);
+  }
+  
+  .error-action.secondary {
+    border-color: var(--color-primary-light);
+  }
+  
+  .error-action.secondary:hover {
+    background-color: rgba(26, 115, 232, 0.1);
+  }
 } 

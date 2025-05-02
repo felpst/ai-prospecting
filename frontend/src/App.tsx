@@ -1,37 +1,28 @@
-import { Routes, Route } from 'react-router-dom'
-import HomePage from './pages/HomePage'
-import CompanyDetailsPage from './pages/CompanyDetailsPage'
-
-// Placeholder components for future tasks
-const SavedProspectsPage = () => (
-  <div className="page">
-    <h1>Saved Prospects</h1>
-    <p>This page will be implemented in future tasks</p>
-  </div>
-)
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import CompanyDetailsPage from './pages/CompanyDetailsPage';
+import ToastContainer from './components/ToastContainer';
 
 function App() {
   return (
     <div className="app">
-      <header className="app-header">
-        <nav>
-          <a href="/">Home</a>
-          <a href="/saved">Saved Prospects</a>
-        </nav>
-      </header>
-      <main>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/company/:id" element={<CompanyDetailsPage />} />
-          <Route path="/saved" element={<SavedProspectsPage />} />
-          <Route path="*" element={<div>Page not found</div>} />
-        </Routes>
-      </main>
-      <footer className="app-footer">
-        <p>&copy; {new Date().getFullYear()} AI-Prospecting</p>
-      </footer>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/company/:id" element={<CompanyDetailsPage />} />
+        <Route path="/saved" element={<Navigate to="/?tab=saved" replace />} />
+        <Route path="*" element={
+          <div className="not-found">
+            <h1>Page Not Found</h1>
+            <p>The page you're looking for doesn't exist or has been moved.</p>
+          </div>
+        } />
+      </Routes>
+      
+      {/* Global toast container */}
+      <ToastContainer position="bottom-right" maxToasts={3} />
     </div>
-  )
+  );
 }
 
-export default App 
+export default App; 

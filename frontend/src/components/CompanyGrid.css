@@ -1,0 +1,120 @@
+.company-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.company-grid-item {
+  height: 100%;
+  transition: all var(--transition-normal);
+}
+
+/* List view styles */
+.company-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.company-list-item {
+  transition: all var(--transition-normal);
+}
+
+.company-list-item .company-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 1rem;
+}
+
+.company-list-item .company-card-logo {
+  width: 80px;
+  flex-shrink: 0;
+  margin-right: 1.5rem;
+}
+
+.company-list-item .company-card-content {
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.company-list-item .company-card-info {
+  flex: 1;
+}
+
+.company-list-item .company-card-actions {
+  margin-top: 0;
+  margin-left: 1rem;
+}
+
+.company-grid-loading,
+.company-grid-empty {
+  padding: 5rem 2rem;
+  text-align: center;
+  background-color: var(--color-paper);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-secondary);
+  margin-top: 2rem;
+}
+
+.company-grid-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.company-grid-empty p {
+  font-size: var(--font-size-lg);
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 992px) {
+  .company-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .company-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  .company-list-item .company-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .company-list-item .company-card-logo {
+    margin-right: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .company-list-item .company-card-content {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .company-list-item .company-card-actions {
+    margin-top: 1rem;
+    margin-left: 0;
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+} 

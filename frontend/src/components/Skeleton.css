@@ -1,0 +1,154 @@
+.skeleton {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-grey-200);
+  border-radius: var(--border-radius-sm);
+  animation: skeleton-pulse 1.5s ease-in-out 0.5s infinite;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: skeleton-shimmer 2s infinite;
+}
+
+/* Skeleton variants */
+.skeleton.text {
+  width: 100%;
+  height: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton.text.short {
+  width: 60%;
+}
+
+.skeleton.text.medium {
+  width: 80%;
+}
+
+.skeleton.text.long {
+  width: 100%;
+}
+
+.skeleton.title {
+  width: 50%;
+  height: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.skeleton.avatar.small {
+  width: 32px;
+  height: 32px;
+}
+
+.skeleton.avatar.large {
+  width: 64px;
+  height: 64px;
+}
+
+.skeleton.card {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--border-radius-md);
+}
+
+.skeleton.button {
+  width: 120px;
+  height: 40px;
+  border-radius: var(--border-radius-sm);
+}
+
+.skeleton.button.small {
+  width: 80px;
+  height: 32px;
+}
+
+.skeleton.button.large {
+  width: 150px;
+  height: 48px;
+}
+
+.skeleton.image {
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  border-radius: var(--border-radius-md);
+}
+
+.skeleton.circle {
+  border-radius: 50%;
+}
+
+.skeleton-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.skeleton-container.card {
+  padding: var(--spacing-md);
+  background-color: var(--color-paper);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  .skeleton {
+    background-color: var(--color-grey-700);
+  }
+  
+  .skeleton::after {
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0,
+      rgba(255, 255, 255, 0.05) 20%,
+      rgba(255, 255, 255, 0.1) 60%,
+      rgba(255, 255, 255, 0)
+    );
+  }
+} 

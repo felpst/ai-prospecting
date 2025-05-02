@@ -35,7 +35,7 @@ try {
 }
 
 // Use model from environment variable, fallback to a default Anthropic model
-const DEFAULT_ANTHROPIC_MODEL = 'claude-3-haiku-20240307';
+const DEFAULT_ANTHROPIC_MODEL = 'claude-3-7-sonnet-20250219';
 const LLM_MODEL = process.env.MODEL || DEFAULT_ANTHROPIC_MODEL;
 
 const MAX_TOKENS_SUMMARY = 500;
@@ -117,8 +117,11 @@ const withLlmRetry = async (fn, maxRetries = LLM_RETRY_ATTEMPTS, initialDelay = 
  * @throws {ApiError} If the LLM service is unavailable or the API call fails.
  */
 export const generateCompanySummary = async (companyData, scrapedContent) => {
-  if (!anthropicClient) {
-    throw new ApiError('Anthropic service is not configured or failed to initialize', 503);
+  // Make the check more explicit: ensure the client is not null AND not undefined.
+  // Also check if the messages property exists, as that's what we need.
+  if (!anthropicClient || !anthropicClient.messages) {
+    logger.error('Anthropic client is not available. Check ANTHROPIC_API_KEY environment variable and initialization logs.');
+    throw new ApiError('Anthropic service is not configured or failed to initialize. Please check server configuration.', 503); // Service Unavailable
   }
 
   // Wrap the core logic in the retry function

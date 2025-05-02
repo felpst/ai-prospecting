@@ -52,12 +52,10 @@ export const mergeCompanyWithEnrichment = (company, enrichment) => {
   if (!company) return null;
   if (!enrichment) return company;
   
+  // Merge enrichment fields directly onto the company object
   return {
     ...company,
-    enrichmentData: {
-      summary: enrichment.summary,
-      lastUpdated: enrichment.lastUpdated,
-      source: enrichment.source
-    }
+    enrichment: enrichment.summary, // Use 'enrichment' key
+    last_enriched: enrichment.lastUpdated // Use 'last_enriched' key
   };
 }; 

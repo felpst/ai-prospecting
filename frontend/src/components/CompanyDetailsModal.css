@@ -1,0 +1,165 @@
+.company-details-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+  .company-details-content {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .company-details-content .enrichment-section {
+    grid-column: 1 / -1; /* Span all columns */
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  gap: var(--spacing-md);
+}
+
+.loading-container p {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+}
+
+.not-found-message {
+  text-align: center;
+  padding: var(--spacing-xl) var(--spacing-lg);
+}
+
+.not-found-message h2 {
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-primary);
+}
+
+.not-found-message p {
+  color: var(--color-text-secondary);
+}
+
+.last-enriched {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.enrichment-button {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.enrichment-button:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+}
+
+.enrichment-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.enrichment-error {
+  background-color: rgba(217, 48, 37, 0.05);
+  border: 1px solid rgba(217, 48, 37, 0.2);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.error-message {
+  color: var(--color-error);
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.technical-details {
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  margin-top: var(--spacing-xs);
+  white-space: pre-wrap;
+  font-size: var(--font-size-xs);
+}
+
+.retry-button {
+  background-color: var(--color-error);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.retry-button:hover {
+  background-color: var(--color-error-dark);
+}
+
+.enrichment-content {
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  background-color: white;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  box-shadow: none;
+  border: 1px solid var(--color-grey-100);
+}
+
+.enrichment-content p {
+  margin: 0;
+}
+
+.placeholder-content {
+  color: var(--color-text-secondary);
+  background-color: var(--color-grey-50);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  box-shadow: none;
+  border: none;
+}
+
+/* Fix for the CompanyInfoSection inside modal */
+.company-details-content .details-section {
+  box-shadow: none;
+  border: 1px solid var(--color-grey-200);
+}
+
+.company-details-content .details-section:hover {
+  box-shadow: none;
+} 

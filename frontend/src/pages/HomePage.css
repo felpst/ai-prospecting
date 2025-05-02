@@ -142,4 +142,240 @@ input, select {
   .tagline {
     font-size: 1rem;
   }
+}
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-background);
+}
+
+.content-container {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: calc(100% - var(--sidebar-width));
+  margin-left: var(--sidebar-width);
+  transition: all var(--transition-normal);
+}
+
+.main-area.full-width {
+  width: 100%;
+  margin-left: 0;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.results-area {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  height: 100%;
+  margin-left: 0;
+}
+
+.results-loading, 
+.results-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 2rem;
+  text-align: center;
+  background-color: var(--color-grey-50);
+  border-radius: var(--border-radius-lg);
+  margin-top: 2rem;
+}
+
+.empty-state-content {
+  max-width: 500px;
+}
+
+.empty-state h2 {
+  margin-bottom: 1rem;
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+}
+
+.empty-state p {
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+  font-size: var(--font-size-md);
+}
+
+.switch-tab-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.switch-tab-button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* Remove these styles if they exist */
+.saved-controls,
+.saved-search-filter,
+.saved-count {
+  /* These styles will be removed */
+}
+
+.sort-dropdown {
+  padding: 0.75rem;
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--border-radius-md);
+  background-color: white;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  min-width: 200px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sort-dropdown:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+}
+
+@media (max-width: 992px) {
+  .results-area {
+    padding: 1.5rem;
+  }
+  
+  .saved-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .saved-search-filter {
+    width: 100%;
+  }
+  
+  .saved-count {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-area {
+    width: 100%;
+    margin-left: 0;
+  }
+  
+  .content-container {
+    flex-direction: column;
+  }
+
+  .main-content {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  
+  .results-area {
+    padding: 1.5rem;
+    height: auto;
+    margin-left: 0;
+  }
+  
+  .mobile-filter-button {
+    display: flex;
+  }
+  
+  .mobile-filters-backdrop {
+    display: block;
+  }
+  
+  .saved-search-filter {
+    flex-direction: column;
+  }
+  
+  .saved-search-container {
+    width: 100%;
+  }
+  
+  .sort-dropdown {
+    width: 100%;
+  }
+}
+
+.mobile-filter-button {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  position: sticky;
+  top: 1rem;
+  z-index: 10;
+}
+
+.mobile-filter-button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.mobile-filters-backdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: calc(var(--z-index-modal) - 1);
+}
+
+/* Pagination container styling */
+.pagination {
+  margin-top: 2rem;
+  margin-bottom: 3rem;
+}
+
+/* Make sure the main content area has proper spacing */
+.page-content {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure empty state has proper spacing */
+.empty-state {
+  margin-bottom: 2rem;
 } 

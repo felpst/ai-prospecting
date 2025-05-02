@@ -1,118 +1,119 @@
+import React from 'react';
 import './Pagination.css';
 
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  disabled?: boolean;
 }
 
-const Pagination: React.FC<PaginationProps> = ({
-  currentPage,
-  totalPages,
-  onPageChange,
-  disabled = false
+const Pagination: React.FC<PaginationProps> = ({ 
+  currentPage, 
+  totalPages, 
+  onPageChange 
 }) => {
+  // Don't render pagination if there's only one page
   if (totalPages <= 1) {
-    return null; // Don't render pagination if there's only one page
+    return null;
   }
 
-  // Generate page numbers to display
+  // Create array of page numbers to display
   const getPageNumbers = () => {
-    const maxVisiblePages = 5;
-    let pages: (number | string)[] = [];
-
-    if (totalPages <= maxVisiblePages) {
-      // Show all pages if there are only a few
-      pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages = [];
+    const maxPagesToShow = 5;
+    
+    if (totalPages <= maxPagesToShow) {
+      // Show all pages if there are fewer than maxPagesToShow
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
     } else {
       // Always show first page
       pages.push(1);
-
-      // Calculate range around current page
-      const leftBound = Math.max(2, currentPage - 1);
-      const rightBound = Math.min(totalPages - 1, currentPage + 1);
-
-      // Add ellipsis if needed
-      if (leftBound > 2) {
-        pages.push('...');
+      
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Adjust if we're near the start or end
+      if (currentPage <= 2) {
+        endPage = Math.min(totalPages - 1, 4);
+      } else if (currentPage >= totalPages - 1) {
+        startPage = Math.max(2, totalPages - 3);
       }
-
-      // Add pages around current page
-      for (let i = leftBound; i <= rightBound; i++) {
+      
+      // Add ellipsis before middle pages if needed
+      if (startPage > 2) {
+        pages.push('ellipsis-start');
+      }
+      
+      // Add middle pages
+      for (let i = startPage; i <= endPage; i++) {
         pages.push(i);
       }
-
-      // Add ellipsis if needed
-      if (rightBound < totalPages - 1) {
-        pages.push('...');
+      
+      // Add ellipsis after middle pages if needed
+      if (endPage < totalPages - 1) {
+        pages.push('ellipsis-end');
       }
-
+      
       // Always show last page
       pages.push(totalPages);
     }
-
+    
     return pages;
   };
-
-  // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent, page: number) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onPageChange(page);
-    }
-  };
-
+  
   return (
-    <nav className="pagination" aria-label="Pagination">
-      {/* Previous page button */}
-      <button
-        className="pagination-button prev"
+    <div className="pagination">
+      <button 
+        className="pagination-button prev-button"
         onClick={() => onPageChange(currentPage - 1)}
-        disabled={disabled || currentPage <= 1}
-        aria-label="Go to previous page"
+        disabled={currentPage === 1}
+        aria-label="Previous page"
       >
-        ← Previous
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
       </button>
-
-      {/* Page numbers */}
-      <div className="pagination-pages">
+      
+      <div className="pagination-numbers">
         {getPageNumbers().map((page, index) => {
-          if (typeof page === 'string') {
-            // Ellipsis
+          if (page === 'ellipsis-start' || page === 'ellipsis-end') {
             return (
-              <span key={`ellipsis-${index}`} className="pagination-ellipsis">
-                {page}
+              <span 
+                key={`ellipsis-${index}`} 
+                className="pagination-ellipsis"
+              >
+                ...
               </span>
             );
           }
-
+          
           return (
             <button
-              key={page}
+              key={index}
               className={`pagination-number ${currentPage === page ? 'active' : ''}`}
-              onClick={() => onPageChange(page)}
-              onKeyDown={(e) => handleKeyDown(e, page)}
-              disabled={disabled}
-              aria-label={`Page ${page}`}
+              onClick={() => onPageChange(page as number)}
               aria-current={currentPage === page ? 'page' : undefined}
+              aria-label={`Page ${page}`}
             >
               {page}
             </button>
           );
         })}
       </div>
-
-      {/* Next page button */}
-      <button
-        className="pagination-button next"
+      
+      <button 
+        className="pagination-button next-button"
         onClick={() => onPageChange(currentPage + 1)}
-        disabled={disabled || currentPage >= totalPages}
-        aria-label="Go to next page"
+        disabled={currentPage === totalPages}
+        aria-label="Next page"
       >
-        Next →
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
       </button>
-    </nav>
+    </div>
   );
 };
 

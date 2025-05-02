@@ -12,7 +12,7 @@ import Company from '../models/company.js';
  */
 export const getCompanyById = async (id) => {
   try {
-    const company = await Company.findOne({ id }).lean();
+    const company = await Company.findOne({ id });
     return company;
   } catch (error) {
     console.error(`Error fetching company ID ${id}:`, error);
