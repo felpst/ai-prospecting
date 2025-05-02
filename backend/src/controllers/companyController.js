@@ -153,6 +153,7 @@ export const enrichCompany = asyncHandler(async (req, res) => {
   let scrapedContentData;
   let scrapeSource = 'cache';
   let errorDetails = null;
+  let dataSource = company.website ? 'website' : 'linkedin';
 
   try {
     // Use website if available, otherwise try to use LinkedIn
@@ -282,33 +283,82 @@ export const enrichCompany = asyncHandler(async (req, res) => {
 
     // 5. Call the LLM service to generate the summary
     console.log(`[Enrich] Calling LLM service for company ${id} using content from ${scrapeSource}`);
-    const generatedSummary = await llmService.generateCompanySummary(
-      company.toObject(), // Pass basic company data
-      scrapedContentData.toObject() // Pass the scraped content object
-    );
+    try {
+      const generatedSummary = await llmService.generateCompanySummary(
+        company.toObject(), // Pass basic company data
+        scrapedContentData.toObject() // Pass the scraped content object
+      );
 
-    // 6. Update the company with the actual enrichment result and timestamp
-    console.log(`[Enrich] Storing generated summary for company ${id}`);
-    company.enrichment = generatedSummary;
-    company.last_enriched = new Date();
-    await company.save();
+      // 6. Update the company with the actual enrichment result and timestamp
+      console.log(`[Enrich] Storing generated summary for company ${id}`);
+      company.enrichment = generatedSummary;
+      company.last_enriched = new Date();
+      await company.save();
 
-    const executionTime = Date.now() - startTime;
-    console.log(`[API] Enrichment process for company ${id} completed in ${executionTime}ms`);
+      const executionTime = Date.now() - startTime;
+      console.log(`[API] Enrichment process for company ${id} completed in ${executionTime}ms`);
 
-    // 7. Return 200 OK with the result (since it's synchronous for now)
-    res.status(200).json({
-      success: true,
-      message: 'Company enrichment successful.',
-      companyId: id,
-      scrapeSource,
-      dataSource: sourceType,
-      enrichment: {
-        summary: company.enrichment,
-        timestamp: company.last_enriched
+      // 7. Return 200 OK with the result (since it's synchronous for now)
+      res.status(200).json({
+        success: true,
+        message: 'Company enrichment successful.',
+        companyId: id,
+        scrapeSource,
+        dataSource,
+        enrichment: {
+          summary: company.enrichment,
+          timestamp: company.last_enriched
+        }
+      });
+    } catch (llmError) {
+      // Handle LLM-specific errors
+      console.error(`[ERROR] LLM service error for company ${id}: ${llmError.message}`);
+      
+      // Define LLM error categories and user-friendly messages
+      let llmErrorCategory = 'llm_general_error';
+      let userFriendlyMessage = `An error occurred while generating the AI summary for "${company.name}". Please try again later.`;
+      
+      // Map common LLM errors to categories
+      if (llmError.message.includes('API key')) {
+        llmErrorCategory = 'llm_auth_error';
+        userFriendlyMessage = 'Authentication error with AI service. Please contact support.';
+      } else if (llmError.message.includes('rate limit') || llmError.message.includes('quota')) {
+        llmErrorCategory = 'llm_rate_limit';
+        userFriendlyMessage = 'The AI service is currently experiencing high demand. Please try again later.';
+      } else if (llmError.message.includes('timeout')) {
+        llmErrorCategory = 'llm_timeout';
+        userFriendlyMessage = 'The AI service took too long to respond. Please try again later.';
+      } else if (llmError.message.includes('content policy') || llmError.message.includes('content filter')) {
+        llmErrorCategory = 'llm_content_policy';
+        userFriendlyMessage = 'The content could not be processed due to AI service content policies.';
       }
-    });
-
+      
+      errorDetails = {
+        message: userFriendlyMessage,
+        category: llmErrorCategory,
+        technicalDetails: llmError.message,
+        source: 'llm_service'
+      };
+      
+      // Store partial results - the scraped content was successful
+      // This allows resuming from scraping next time
+      const executionTime = Date.now() - startTime;
+      
+      // Return error but include partial success info
+      res.status(500).json({
+        success: false,
+        message: 'Content was successfully scraped, but AI summary generation failed.',
+        error: errorDetails,
+        companyId: id,
+        scrapeSource,
+        dataSource,
+        partialSuccess: {
+          scrapingCompleted: true,
+          contentAvailable: true
+        },
+        executionTime
+      });
+    }
   } catch (error) {
     const executionTime = Date.now() - startTime;
     console.error(`[ERROR] Company enrichment failed for ${id} after ${executionTime}ms: ${error.message}`);
@@ -322,6 +372,7 @@ export const enrichCompany = asyncHandler(async (req, res) => {
         category: error.cause?.category || 'general_error'
       },
       companyId: id,
+      dataSource,
       executionTime
     };
     

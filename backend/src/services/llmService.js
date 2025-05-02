@@ -130,11 +130,18 @@ export const generateCompanySummary = async (companyData, scrapedContent) => {
 
     // 2. Make the API call to Anthropic
     logger.info(`Calling Anthropic (${LLM_MODEL}) for company summary: ${companyData.id || companyData.name}`);
+    
+    // Use structured output format for consistent parsing
+    const systemPrompt = `You are a helpful assistant designed to write concise, professional company summaries based on provided website content.
+You produce business analytics summaries with accurate information derived from the source material.
+Always be factual, objective, and professional in your analysis.
+Focus on the company's core business, products/services, target market, and unique value proposition.`;
+
     const response = await anthropicClient.messages.create({
       model: LLM_MODEL,
       max_tokens: MAX_TOKENS_SUMMARY,
       temperature: TEMPERATURE_SUMMARY,
-      system: 'You are a helpful assistant designed to write concise, professional company summaries based on provided website content.',
+      system: systemPrompt,
       messages: [
         { role: 'user', content: prompt }
       ]
@@ -198,74 +205,146 @@ const truncateText = (text, maxTokens) => {
  */
 const buildEnhancedSummaryPrompt = (companyData, scrapedContent) => {
   // Define the base structure and initial instructions
-  let prompt = `Generate a concise, factual, and professional summary (target: 100-150 words) for the company named "${companyData.name}".\n`;
+  let prompt = `Generate a concise, factual, and professional summary (target: 150-200 words) for the company named "${companyData.name}".\n\n`;
+  
+  // Add basic company information
+  prompt += "### Company Information ###\n";
   if (companyData.industry) prompt += `Industry: ${companyData.industry}\n`;
+  if (companyData.location) prompt += `Location: ${companyData.location}\n`;
+  if (companyData.founded) prompt += `Founded: ${companyData.founded}\n`;
+  if (companyData.size) prompt += `Company Size: ${companyData.size}\n`;
+  if (companyData.website) prompt += `Website: ${companyData.website}\n`;
+  if (companyData.linkedin_url) prompt += `LinkedIn: ${companyData.linkedin_url}\n`;
   if (companyData.description) prompt += `Provided Description: ${companyData.description}\n`;
-  prompt += '\nAnalyze the following scraped content from their website to understand their core business, mission, key products/services, and target audience. Synthesize this information into the summary.\n\n'
+  prompt += '\n';
+
+  // Add task description
+  prompt += "### Task ###\n";
+  prompt += "Analyze the following content from their web presence (website and/or LinkedIn) to understand their:\n";
+  prompt += "1. Core business model and offerings\n";
+  prompt += "2. Primary products/services\n";
+  prompt += "3. Target audience/market\n";
+  prompt += "4. Value proposition or competitive advantages\n";
+  prompt += "5. Company mission/vision (if mentioned)\n\n";
+  prompt += "Synthesize this information into a comprehensive yet concise company summary.\n\n";
 
   // Define content sections with priorities (higher number = higher priority)
-  const sections = [
-    { title: 'About Info', text: scrapedContent.aboutInfo, priority: 5 },
-    { title: 'Main Content', text: scrapedContent.mainContent, priority: 4 },
-    { title: 'Product/Service Info', text: scrapedContent.productInfo, priority: 3 },
-    { title: 'Team Info', text: scrapedContent.teamInfo, priority: 1 }, // Lower priority
-    { title: 'Contact Info', text: scrapedContent.contactInfo, priority: 1 }, // Lower priority
-  ].filter(s => s.text && s.text.trim().length > 20); // Filter out empty/short sections
+  const sections = [];
+  const isLinkedInOnly = !scrapedContent.mainContent && !scrapedContent.aboutInfo && 
+                          scrapedContent.linkedinData && !scrapedContent.linkedinData.error;
   
-  // Add LinkedIn data if available
+  // Website content sections
+  if (scrapedContent.aboutInfo) {
+    sections.push({ title: 'About Info', text: scrapedContent.aboutInfo, priority: 5 });
+  }
+  if (scrapedContent.mainContent) {
+    sections.push({ title: 'Main Website Content', text: scrapedContent.mainContent, priority: 4 });
+  }
+  if (scrapedContent.productInfo) {
+    sections.push({ title: 'Product/Service Info', text: scrapedContent.productInfo, priority: 3 });
+  }
+  if (scrapedContent.teamInfo) {
+    sections.push({ title: 'Team Info', text: scrapedContent.teamInfo, priority: 1 });
+  }
+  if (scrapedContent.contactInfo) {
+    sections.push({ title: 'Contact Info', text: scrapedContent.contactInfo, priority: 1 });
+  }
+  
+  // LinkedIn content sections - prioritize when LinkedIn is the primary/only source
   if (scrapedContent.linkedinData && !scrapedContent.linkedinData.error) {
     if (scrapedContent.linkedinData.description) {
       sections.push({ 
         title: 'LinkedIn Description', 
         text: scrapedContent.linkedinData.description, 
-        priority: 5  // High priority
+        priority: isLinkedInOnly ? 6 : 5  // Higher priority if LinkedIn-only
       });
     }
     if (scrapedContent.linkedinData.specialties) {
       sections.push({ 
         title: 'LinkedIn Specialties', 
         text: scrapedContent.linkedinData.specialties, 
-        priority: 4
+        priority: isLinkedInOnly ? 5 : 4
+      });
+    }
+    if (scrapedContent.linkedinData.employeeCount) {
+      sections.push({ 
+        title: 'LinkedIn Company Size', 
+        text: scrapedContent.linkedinData.employeeCount, 
+        priority: 2
       });
     }
   }
 
-  // Sort sections by priority
-  sections.sort((a, b) => b.priority - a.priority);
+  // Filter out empty/short sections and sort by priority
+  const filteredSections = sections.filter(s => s.text && s.text.trim().length > 20);
+  filteredSections.sort((a, b) => b.priority - a.priority);
 
-  // Calculate available tokens for scraped content (rough approximation)
-  let availableTokens = MAX_PROMPT_TOKENS - (prompt.length / 4) - 150; // Reserve tokens for final instructions & overhead
+  // If no content sections remain after filtering, add a note
+  if (filteredSections.length === 0) {
+    prompt += "### Content ###\n";
+    prompt += "No substantial content was found on the company's web presence. ";
+    prompt += "Please generate a minimal summary based only on the company information provided above.\n\n";
+  } else {
+    // Calculate available tokens for scraped content (rough approximation)
+    let availableTokens = MAX_PROMPT_TOKENS - (prompt.length / 4) - 150; // Reserve tokens for final instructions & overhead
 
-  let includedContent = '';
-  let remainingTokens = availableTokens;
+    let includedContent = '';
+    let remainingTokens = availableTokens;
 
-  // Add content sections prioritizing higher priority ones until token limit is reached
-  for (const section of sections) {
-    const maxSectionTokens = Math.floor(remainingTokens / sections.length); // Distribute remaining tokens (simple approach)
-    const truncatedSectionText = truncateText(section.text, maxSectionTokens);
-    
-    if (truncatedSectionText) {
-      includedContent += `--- ${section.title} ---\n${truncatedSectionText}\n\n`;
-      remainingTokens -= truncatedSectionText.length / 4; // Update remaining tokens (approximate)
+    // Add content sections prioritizing higher priority ones until token limit is reached
+    prompt += "### Content ###\n";
+    for (const section of filteredSections) {
+      const maxSectionTokens = Math.max(
+        50, // Ensure a minimum representation
+        Math.floor(remainingTokens * (section.priority / filteredSections.reduce((sum, s) => sum + s.priority, 0)))
+      );
+      
+      const truncatedSectionText = truncateText(section.text, maxSectionTokens);
+      
+      if (truncatedSectionText) {
+        includedContent += `--- ${section.title} ---\n${truncatedSectionText}\n\n`;
+        remainingTokens -= truncatedSectionText.length / 4; // Update remaining tokens (approximate)
+      }
+      if (remainingTokens <= 0) break; // Stop if token budget is exceeded
     }
-    if (remainingTokens <= 0) break; // Stop if token budget is exceeded
+
+    prompt += includedContent;
   }
 
-  prompt += '--- Website Content Start ---\n' + includedContent + '--- Website Content End ---\n';
-
-  prompt += '\nInstructions:\n';
-  prompt += '- Base the summary *only* on the information provided above.\n';
-  prompt += '- Identify the company\'s core business, mission (if stated), main products/services, and target customers.\n';
-  prompt += '- Be objective, factual, and use professional language.\n';
-  prompt += '- Do not include information not present in the text (e.g., financial data unless provided).\n';
-  prompt += '- Avoid promotional language or making subjective claims.\n';
-  prompt += '- Output *only* the summary text.';
-
-  // Final length check (fallback)
-  if (prompt.length > 8000) {
-    prompt = prompt.substring(0, 8000) + '... [PROMPT TRUNCATED]';
-    logger.warn(`Prompt for ${companyData.name} was truncated based on character length.`);
+  // Add source context
+  prompt += "### Source Context ###\n";
+  if (isLinkedInOnly) {
+    prompt += "NOTE: The above content is derived ONLY from LinkedIn, as no website content was available.\n";
+    prompt += "Focus heavily on the LinkedIn data and be more conservative with assumptions.\n\n";
+  } else if (scrapedContent.linkedinData && !scrapedContent.linkedinData.error) {
+    prompt += "The above content includes both website and LinkedIn data.\n\n";
+  } else {
+    prompt += "The above content is derived from the company's website.\n\n";
   }
-  
+
+  // Add output instructions
+  prompt += "### Output Instructions ###\n";
+  prompt += "Write a comprehensive yet concise company summary (150-200 words) covering:\n";
+  prompt += "- The company's core business and main offerings\n";
+  prompt += "- Key products or services\n";
+  prompt += "- Target market/audience (if identifiable)\n";
+  prompt += "- Any clear competitive advantages or unique selling points\n";
+  prompt += "- Company mission or values (if mentioned)\n\n";
+  prompt += "Guidelines:\n";
+  prompt += "- Base the summary ONLY on the information provided above\n";
+  prompt += "- Use professional, objective language\n";
+  prompt += "- Be clear and specific about what the company actually does\n";
+  prompt += "- Avoid promotional language, subjective claims, or unverifiable information\n";
+  prompt += "- Include concrete details rather than vague statements\n";
+  prompt += "- Present only factual information from the provided content\n";
+  prompt += "- Use proper grammar, punctuation, and paragraph structure\n";
+  prompt += "- Output ONLY the summary text, nothing before or after, formatted as a professional business description\n";
+
   return prompt;
 };
+
+// Export testing helpers if in testing environment
+export const __test__ = process.env.NODE_ENV === 'test' ? {
+  buildEnhancedSummaryPrompt,
+  truncateText
+} : undefined;
