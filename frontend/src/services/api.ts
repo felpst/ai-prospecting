@@ -76,6 +76,17 @@ export const CompanyAPI = {
     }
   },
 
+  // Natural language search using unified API
+  naturalLanguageSearch: async (query: string, options: any = {}) => {
+    try {
+      const response = await api.post('/search/unified', { query, options });
+      return response.data;
+    } catch (error) {
+      console.error('Error in naturalLanguageSearch:', error);
+      throw error;
+    }
+  },
+
   // Get a single company by ID
   getCompany: async (id: string) => {
     try {

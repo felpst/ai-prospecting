@@ -7,9 +7,12 @@
 import express from 'express';
 import { asyncHandler } from '../utils/errorHandler.js';
 import * as searchService from '../services/searchService.js';
+import * as nlSearchController from '../controllers/naturalLanguageSearchController.js';
+import * as webSearchController from '../controllers/webSearchController.js';
+import * as companyMatcherController from '../controllers/companyMatcherController.js';
 import { formatPaginationLinks } from '../utils/paginationUtils.js';
-import { cacheSearchResults } from '../middleware/cacheMiddleware.js';
-import { cacheTTL } from '../utils/cacheConfig.js';
+import { cacheSearchResults, cacheMiddleware } from '../middleware/cacheMiddleware.js';
+import { cacheTTL, cacheKeys } from '../utils/cacheConfig.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -100,5 +103,70 @@ router.get('/facets', cacheSearchResults(cacheTTL.SEARCH_RESULTS), asyncHandler(
     throw error;
   }
 }));
+
+/**
+ * @route POST /api/search/natural-language
+ * @description Natural language search endpoint that converts free-text queries into structured search parameters
+ */
+router.post('/natural-language', asyncHandler(nlSearchController.naturalLanguageSearch));
+
+/**
+ * @route POST /api/search/unified
+ * @description Comprehensive natural language search API that combines database search, web search, 
+ * entity extraction, and company matching with intelligent ranking and fallbacks
+ */
+router.post('/unified', cacheMiddleware({
+  getKey: req => `unified-search:${req.body.query}:${JSON.stringify(req.body.options || {})}`,
+  ttl: cacheTTL.UNIFIED_SEARCH || 300, // 5 minutes default
+  shouldCache: req => !!req.body.query // Only cache if there's a query
+}), asyncHandler(nlSearchController.unifiedSearch));
+
+/**
+ * @route POST /api/search/web
+ * @description Web search endpoint that uses OpenAI's web search to find companies
+ */
+router.post('/web', asyncHandler(nlSearchController.webSearch));
+
+/**
+ * @route POST /api/search/extract-entities
+ * @description Extract structured company entities from web search results
+ */
+router.post('/extract-entities', asyncHandler(nlSearchController.extractCompanyEntities));
+
+/**
+ * @route POST /api/search/web-companies
+ * @description Real-time web search endpoint that retrieves company information from the web
+ */
+router.post('/web-companies', asyncHandler(webSearchController.searchCompanies));
+
+/**
+ * @route POST /api/search/web-aggregate
+ * @description Aggregated web search endpoint that collects comprehensive company information from multiple sources
+ */
+router.post('/web-aggregate', asyncHandler(webSearchController.aggregateSearchResults));
+
+/**
+ * @route POST /api/search/match-companies
+ * @description Match extracted company entities to existing database entries
+ */
+router.post('/match-companies', asyncHandler(companyMatcherController.matchCompanyEntities));
+
+/**
+ * @route POST /api/search/with-matching
+ * @description End-to-end search flow with web search, entity extraction, and company matching
+ */
+router.post('/with-matching', asyncHandler(companyMatcherController.searchWithMatching));
+
+/**
+ * @route POST /api/search/embedding
+ * @description Generate an embedding for a given text
+ */
+router.post('/embedding', asyncHandler(companyMatcherController.generateEmbedding));
+
+/**
+ * @route POST /api/search/similarity
+ * @description Calculate similarity between two texts using embeddings
+ */
+router.post('/similarity', asyncHandler(companyMatcherController.calculateSimilarity));
 
 export default router; 

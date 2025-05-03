@@ -378,4 +378,48 @@ input, select {
 /* Ensure empty state has proper spacing */
 .empty-state {
   margin-bottom: 2rem;
+}
+
+.search-metadata {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.metadata-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.metadata-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #343a40;
+}
+
+.execution-time {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.parsed-query,
+.search-sources {
+  font-size: 14px;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.parsed-query p,
+.search-sources p {
+  margin: 0;
+}
+
+.parsed-query strong,
+.search-sources strong {
+  font-weight: 600;
+  color: #343a40;
 } 

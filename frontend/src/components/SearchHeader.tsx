@@ -48,7 +48,7 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={activeTab === 'discover' 
-                  ? "Search companies or try 'Fastest growing AR companies in Silicon Valley'" 
+                  ? "Try 'Best companies that offer a CRM' or 'AI startups in New York'" 
                   : "Search saved companies..."}
                 className="search-input"
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}

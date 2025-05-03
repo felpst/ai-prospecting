@@ -13,6 +13,8 @@ export const cacheTTL = {
   ENRICHED_DATA: 24 * 60 * 60,
   // Cache scraped content for 12 hours
   SCRAPED_CONTENT: 12 * 60 * 60,
+  // Cache unified search results for 10 minutes (longer than regular search due to additional processing)
+  UNIFIED_SEARCH: 10 * 60,
   // Default TTL for other cached items
   DEFAULT: 5 * 60
 };

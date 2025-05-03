@@ -19,6 +19,14 @@ const DEFAULT_PARAMS: CompanySearchParams = {
   order: 'asc'
 };
 
+// Search metadata interface for natural language search
+interface SearchMetadata {
+  query: string;
+  sources?: Record<string, boolean>;
+  parsedQuery?: any;
+  executionTime?: string;
+}
+
 // Helper to convert search params to state
 const parseSearchParams = (searchParams: URLSearchParams): CompanySearchParams => {
   const params: CompanySearchParams = { ...DEFAULT_PARAMS };
@@ -98,6 +106,9 @@ const HomePage: React.FC = () => {
   // State for company details modal
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State for search metadata
+  const [searchMetadata, setSearchMetadata] = useState<SearchMetadata | null>(null);
   
   // Store the parsed params in a ref to prevent it from causing re-renders
   const paramsRef = useRef(parseSearchParams(searchParams));
@@ -227,26 +238,98 @@ const HomePage: React.FC = () => {
     }
   };
   
-  // Update the handleSearch function to maintain search consistency between tabs
-  const handleSearch = (query: string) => {
-    // Update the appropriate state based on active tab
-    if (activeTab === 'saved') {
-      setSearchQuerySaved(query);
+  // Check if a search query is likely a natural language query
+  const isNaturalLanguageQuery = (query: string): boolean => {
+    // If query contains multiple words and is a sentence-like structure
+    return query.split(' ').length > 3 && 
+           !query.includes(':') && // Not containing special search operators
+           /[a-zA-Z]/.test(query); // Contains letters (not just numbers/symbols)
+  };
+
+  // Handle natural language search
+  const handleNaturalLanguageSearch = async (query: string) => {
+    setLoading(true);
+    setError(null);
+    console.log('[HomePage] Natural language search:', query);
+    
+    try {
+      const result = await CompanyAPI.naturalLanguageSearch(query);
+      console.log('[HomePage] Natural language search result:', result);
+      
+      if (result && result.success) {
+        // Extract companies from the unified search API response
+        const companiesArray = Array.isArray(result.companies) ? result.companies : [];
+        
+        // Ensure each company has an id property
+        const normalizedCompanies = companiesArray.map((company: any) => ({
+          ...company,
+          // If company already has id use it, otherwise use _id as fallback
+          id: company.id || company._id,
+          // Ensure other required properties exist to avoid render errors
+          name: company.name || 'Unknown Company',
+          industry: company.industry || 'Unspecified',
+          location: [company.locality, company.region, company.country]
+            .filter(Boolean)
+            .join(', ') || 'Unknown'
+        }));
+        
+        console.log('[HomePage] Normalized companies:', normalizedCompanies);
+        
+        setCompanies(normalizedCompanies);
+        setTotalResults(normalizedCompanies.length);
+        setSearchPerformed(true);
+        
+        // Update metadata for results display
+        setSearchMetadata({
+          query,
+          sources: result.sources,
+          parsedQuery: result.parsedQuery,
+          executionTime: result.meta?.executionTime
+        });
+      } else {
+        console.error('Unexpected API response format:', result);
+        setError(result.error || 'Received invalid data from the server. Please try again.');
+        setCompanies([]);
+        setTotalResults(0);
+        setSearchPerformed(true);
+      }
+    } catch (err) {
+      console.error('Error in natural language search:', err);
+      setError('Failed to perform natural language search. Please try again.');
+      setCompanies([]);
+      setTotalResults(0);
+      setSearchPerformed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle header search (can be natural language or regular search)
+  const handleHeaderSearch = (query: string) => {
+    // If empty query, reset filters
+    if (!query) {
+      setSearchParams({});
+      return;
     }
     
-    // Always update URL parameters for consistency
-    const newParams = new URLSearchParams(searchParams);
-    
-    if (query) {
-      newParams.set('query', query);
+    // Check if this appears to be a natural language query
+    if (isNaturalLanguageQuery(query)) {
+      handleNaturalLanguageSearch(query);
     } else {
-      newParams.delete('query');
+      // Regular search - update search params
+      const newParams = {
+        ...paramsRef.current,
+        query,
+        page: '1'
+      };
+      
+      // Using setSearchParams
+      const urlParams = new URLSearchParams();
+      Object.entries(newParams).forEach(([key, value]) => {
+        if (value) urlParams.set(key, String(value));
+      });
+      setSearchParams(urlParams);
     }
-    
-    // Reset to page 1 when searching
-    newParams.set('page', '1');
-    
-    setSearchParams(newParams);
   };
   
   // Handle applying filters
@@ -315,21 +398,26 @@ const HomePage: React.FC = () => {
   
   // Handle tab change
   const handleTabChange = (tab: 'discover' | 'saved') => {
+    // If already on the selected tab, don't do anything
+    if (tab === activeTab) return;
+    
     setActiveTab(tab);
     
     // Update URL without triggering a navigation
     const newParams = new URLSearchParams(searchParams);
     if (tab === 'saved') {
       newParams.set('tab', 'saved');
+      
+      // Preserve discover tab parameters
+      if (paramsRef.current.query) {
+        setSearchQuerySaved(paramsRef.current.query);
+      }
     } else {
       newParams.delete('tab');
     }
-    setSearchParams(newParams, { replace: true });
     
-    // If switching to saved tab, fetch saved companies if needed
-    if (tab === 'saved') {
-      fetchSavedCompanies();
-    }
+    // Don't reset searchPerformed flag when switching tabs
+    setSearchParams(newParams, { replace: true });
   };
   
   // Filter and sort saved companies based on search query and sort option
@@ -430,16 +518,19 @@ const HomePage: React.FC = () => {
   
   // Fetch companies when search params change or on mount - only when in discover tab
   useEffect(() => {
-    if (activeTab === 'discover') {
+    if (activeTab === 'discover' && (searchParams.toString() !== '' || searchPerformed)) {
       console.log('[HomePage] useEffect triggered for fetchCompanies');
       fetchCompanies();
     }
   }, [fetchCompanies, searchParams, activeTab]);
   
-  // Fetch saved companies on mount or when switching to saved tab
+  // Fetch saved companies on initial mount or when explicitly needed
+  // Changed dependency from activeTab to a more specific condition
   useEffect(() => {
-    console.log('[HomePage] useEffect triggered for fetchSavedCompanies');
-    fetchSavedCompanies();
+    if (savedCompanies.length === 0 || activeTab === 'saved') {
+      console.log('[HomePage] useEffect triggered for fetchSavedCompanies');
+      fetchSavedCompanies();
+    }
   }, [fetchSavedCompanies, activeTab]);
   
   // Handle page change for discover tab
@@ -459,6 +550,49 @@ const HomePage: React.FC = () => {
   // Handle closing company details modal
   const handleCloseCompanyDetails = () => {
     setIsModalOpen(false);
+  };
+  
+  // Render the natural language search metadata if available
+  const renderSearchMetadata = () => {
+    if (!searchMetadata) return null;
+    
+    return (
+      <div className="search-metadata">
+        <div className="metadata-header">
+          <h3>Natural Language Search Results</h3>
+          {searchMetadata.executionTime && (
+            <span className="execution-time">Processed in {searchMetadata.executionTime}</span>
+          )}
+        </div>
+        
+        {searchMetadata.parsedQuery && (
+          <div className="parsed-query">
+            <p>
+              <strong>We understood your query as:</strong> {' '}
+              {Object.entries(searchMetadata.parsedQuery)
+                .filter(([key, value]) => value && key !== 'query')
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ')}
+              {Object.keys(searchMetadata.parsedQuery).length <= 1 && searchMetadata.parsedQuery.query && (
+                <span>Looking for "<strong>{searchMetadata.parsedQuery.query}</strong>"</span>
+              )}
+            </p>
+          </div>
+        )}
+        
+        {searchMetadata.sources && (
+          <div className="search-sources">
+            <p>
+              <strong>Data sources:</strong> {' '}
+              {Object.entries(searchMetadata.sources)
+                .filter(([_, active]) => active)
+                .map(([source]) => source)
+                .join(', ')}
+            </p>
+          </div>
+        )}
+      </div>
+    );
   };
   
   // Tab content for discover tab
@@ -491,6 +625,9 @@ const HomePage: React.FC = () => {
             currentOrder={paramsRef.current.order || 'asc'}
             currentView={viewMode}
           />
+          
+          {/* Display search metadata for natural language searches */}
+          {renderSearchMetadata()}
           
           <CompanyGrid
             companies={companies}
@@ -652,7 +789,7 @@ const HomePage: React.FC = () => {
         <div className="main-area">
           {/* Search Header */}
           <SearchHeader
-            onSearch={handleSearch}
+            onSearch={handleHeaderSearch}
             defaultValue={activeTab === 'discover' ? (paramsRef.current.query || '') : searchQuerySaved}
             activeTab={activeTab}
             onTabChange={handleTabChange}

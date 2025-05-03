@@ -83,6 +83,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     }
   };
   
+  // Try to safely get data or show default
+  const getSafe = (value: any, defaultValue: string = 'Unknown') => {
+    return value || defaultValue;
+  };
+  
   if (!company) {
     return null;
   }
@@ -95,15 +100,15 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             {getInitials(company.name || '')}
           </div>
           <div className="company-title">
-            <h3 className="company-name">{company.name || 'Unnamed Company'}</h3>
+            <h3 className="company-name">{getSafe(company.name)}</h3>
             {company.website && (
               <a 
-                href={company.website} 
+                href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
                 className="company-website"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {company.website.replace(/(^\w+:|^)\/\//, '').replace(/example\.com/, 'company.com')}
+                {company.website}
               </a>
             )}
           </div>
@@ -113,16 +118,14 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           className={`company-bookmark ${isSaved ? 'saved' : ''}`}
           onClick={handleBookmarkClick}
           aria-label={isSaved ? "Remove from saved" : "Save company"}
+          title={isSaved ? "Remove from saved" : "Save company"}
         >
-          {isSaved ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M5 21V5c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2v16l-7-3-7 3z" />
-            </svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-          )}
+          <svg viewBox="0 0 24 24" width="16" height="16">
+            <path d={isSaved 
+              ? "M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" 
+              : "M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"} 
+              fill="currentColor"/>
+          </svg>
         </button>
       </div>
       
@@ -130,11 +133,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         <div className="company-grid">
           <InfoItem 
             label="Industry" 
-            value={company.industry || 'Unknown'} 
+            value={getSafe(company.industry)} 
           />
           <InfoItem 
             label="Size" 
-            value={company.size || 'Unknown'} 
+            value={getSafe(company.size)} 
           />
           <InfoItem 
             label="Founded" 
@@ -142,10 +145,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           />
           <InfoItem 
             label="Location" 
-            value={company.locality 
+            value={getSafe(company.locality 
               ? `${company.locality}, ${company.region || ''}`
               : company.region || company.country || 'Unknown'
-            } 
+            )} 
           />
         </div>
         
@@ -198,11 +201,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         <button 
           onClick={handleViewDetails}
           className="view-details-button"
+          aria-label="View company details"
         >
-          View details
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
+          View Details
         </button>
         
         {company.linkedin_url && (
