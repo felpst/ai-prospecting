@@ -6,7 +6,7 @@ This platform helps sales professionals identify and research potential B2B cust
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ai-prospecting.git
+git clone https://github.com/felpst/ai-prospecting.git
 cd ai-prospecting
 
 # Run the setup script to prepare the dataset
