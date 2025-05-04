@@ -55,4 +55,4 @@ tasks/
 .DS_Store
 
 # Large files
-company_dataset.json 
+company_dataset.json .cursor/mcp.json
