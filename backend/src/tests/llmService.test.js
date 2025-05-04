@@ -4,12 +4,12 @@
  * This test file verifies the LLM service functionality for company enrichment.
  * It includes tests for prompt construction and API interactions.
  * 
- * Note: Set ANTHROPIC_API_KEY environment variable to run integration tests.
+ * Note: Set OPENAI_API_KEY environment variable to run integration tests.
  */
 
 import { expect } from 'chai';
 import sinon from 'sinon';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import * as llmService from '../services/llmService.js';
 import dotenv from 'dotenv';
 
@@ -55,11 +55,11 @@ describe('LLM Service', function() {
   // Increase timeout for API calls
   this.timeout(TEST_TIMEOUT);
   
-  let anthropicStub;
+  let openaiStub;
   
   beforeEach(() => {
-    // Create a stub for Anthropic API
-    anthropicStub = sinon.stub();
+    // Create a stub for OpenAI API
+    openaiStub = sinon.stub();
   });
   
   afterEach(() => {
@@ -106,11 +106,11 @@ describe('LLM Service', function() {
   
   describe('Error Handling', () => {
     it('should handle API connection errors', async () => {
-      // Stub Anthropic client to simulate connection error
-      const mockError = new Anthropic.APIConnectionError('Connection failed');
+      // Stub OpenAI client to simulate connection error
+      const mockError = new OpenAI.APIConnectionError('Connection failed');
       
-      // Replace the Anthropic client with our stub
-      sinon.stub(Anthropic.prototype.messages, 'create').rejects(mockError);
+      // Replace the OpenAI client with our stub
+      sinon.stub(OpenAI.prototype.chat.completions, 'create').rejects(mockError);
       
       try {
         await llmService.generateCompanySummary(sampleCompanyData, sampleScrapedContent);
@@ -122,12 +122,12 @@ describe('LLM Service', function() {
     });
     
     it('should handle rate limit errors', async () => {
-      // Stub Anthropic client to simulate rate limit error
-      const mockError = new Anthropic.RateLimitError('Rate limit exceeded');
+      // Stub OpenAI client to simulate rate limit error
+      const mockError = new OpenAI.RateLimitError('Rate limit exceeded');
       mockError.headers = { 'retry-after': '30' };
       
-      // Replace the Anthropic client with our stub
-      sinon.stub(Anthropic.prototype.messages, 'create').rejects(mockError);
+      // Replace the OpenAI client with our stub
+      sinon.stub(OpenAI.prototype.chat.completions, 'create').rejects(mockError);
       
       try {
         await llmService.generateCompanySummary(sampleCompanyData, sampleScrapedContent);
@@ -140,7 +140,7 @@ describe('LLM Service', function() {
   });
   
   // Skip actual API tests if no API key is available
-  const runIntegrationTests = process.env.ANTHROPIC_API_KEY && process.env.RUN_INTEGRATION_TESTS;
+  const runIntegrationTests = process.env.OPENAI_API_KEY && process.env.RUN_INTEGRATION_TESTS;
   
   (runIntegrationTests ? describe : describe.skip)('API Integration (requires API key)', () => {
     it('should generate a company summary through API', async () => {

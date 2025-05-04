@@ -1,6 +1,6 @@
 /**
  * LLM Service
- * Handles communication with Large Language Models (e.g., Anthropic, OpenAI)
+ * Handles communication with Large Language Models (e.g., OpenAI)
  */
 
 // Define ApiError class locally for self-contained error handling
@@ -13,31 +13,31 @@ class ApiError extends Error {
 }
 
 // Import necessary modules
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
 import * as llmCacheService from './llmCacheService.js';
 
 // --- Configuration ---
 
-// Initialize Anthropic client
-let anthropicClient;
+// Initialize OpenAI client
+let openaiClient;
 try {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    logger.warn('ANTHROPIC_API_KEY environment variable not set. LLM service will not function.');
+  if (!process.env.OPENAI_API_KEY) {
+    logger.warn('OPENAI_API_KEY environment variable not set. LLM service will not function.');
   } else {
-    anthropicClient = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
     });
-    logger.info('Anthropic client initialized successfully.');
+    logger.info('OpenAI client initialized successfully.');
   }
 } catch (error) {
-  logger.error(`Failed to initialize Anthropic client: ${error.message}`);
-  anthropicClient = null; // Ensure client is null if initialization fails
+  logger.error(`Failed to initialize OpenAI client: ${error.message}`);
+  openaiClient = null; // Ensure client is null if initialization fails
 }
 
-// Use model from environment variable, fallback to a default Anthropic model
-const DEFAULT_ANTHROPIC_MODEL = 'claude-3-7-sonnet-20250219';
-const LLM_MODEL = process.env.MODEL || DEFAULT_ANTHROPIC_MODEL;
+// Use model from environment variable, fallback to a default OpenAI model
+const DEFAULT_OPENAI_MODEL = 'gpt-4o';
+const LLM_MODEL = process.env.MODEL || DEFAULT_OPENAI_MODEL;
 
 const MAX_TOKENS_SUMMARY = 500;
 const TEMPERATURE_SUMMARY = 0.5;
@@ -59,9 +59,9 @@ const USE_LLM_CACHING = process.env.LLM_CACHING !== 'false'; // Default to true
  * @returns {boolean} True if the error might be transient and worth retrying.
  */
 const isRetryableLlmError = (error) => {
-  if (error instanceof Anthropic.APIConnectionError) return true;
-  if (error instanceof Anthropic.RateLimitError) return true; // Often includes Retry-After
-  if (error instanceof Anthropic.InternalServerError) return true; // 5xx errors
+  if (error instanceof OpenAI.APIConnectionError) return true;
+  if (error instanceof OpenAI.RateLimitError) return true; // Often includes Retry-After
+  if (error instanceof OpenAI.InternalServerError) return true; // 5xx errors
   if (error instanceof ApiError && error.statusCode >= 500) return true; // General server errors
   // Add specific status codes if needed, e.g., 408 Request Timeout
   return false;
@@ -92,8 +92,8 @@ const withLlmRetry = async (fn, maxRetries = LLM_RETRY_ATTEMPTS, initialDelay = 
       delay = delay * (1 + (Math.random() * 0.4 - 0.2));
       delay = Math.max(initialDelay / 2, delay); // Ensure minimum delay
 
-      // Check for Retry-After header in Anthropic errors
-      if (error instanceof Anthropic.RateLimitError && error.headers && error.headers['retry-after']) {
+      // Check for Retry-After header in API errors
+      if (error instanceof OpenAI.RateLimitError && error.headers && error.headers['retry-after']) {
         const retryAfterSeconds = parseInt(error.headers['retry-after'], 10);
         if (!isNaN(retryAfterSeconds)) {
            delay = Math.max(delay, retryAfterSeconds * 1000 + 500); // Use header value + buffer
@@ -114,7 +114,7 @@ const withLlmRetry = async (fn, maxRetries = LLM_RETRY_ATTEMPTS, initialDelay = 
 // --- Core Functions ---
 
 /**
- * Generates a company summary using the configured LLM (Anthropic).
+ * Generates a company summary using the configured LLM (OpenAI).
  * @param {Object} companyData - Basic company information (name, industry, etc.)
  * @param {Object} scrapedContent - Object containing scraped text sections.
  * @returns {Promise<string>} The generated company summary.
@@ -122,10 +122,9 @@ const withLlmRetry = async (fn, maxRetries = LLM_RETRY_ATTEMPTS, initialDelay = 
  */
 export const generateCompanySummary = async (companyData, scrapedContent) => {
   // Make the check more explicit: ensure the client is not null AND not undefined.
-  // Also check if the messages property exists, as that's what we need.
-  if (!anthropicClient || !anthropicClient.messages) {
-    logger.error('Anthropic client is not available. Check ANTHROPIC_API_KEY environment variable and initialization logs.');
-    throw new ApiError('Anthropic service is not configured or failed to initialize. Please check server configuration.', 503); // Service Unavailable
+  if (!openaiClient) {
+    logger.error('OpenAI client is not available. Check OPENAI_API_KEY environment variable and initialization logs.');
+    throw new ApiError('OpenAI service is not configured or failed to initialize. Please check server configuration.', 503); // Service Unavailable
   }
 
   // Check cache if enabled
@@ -145,39 +144,38 @@ export const generateCompanySummary = async (companyData, scrapedContent) => {
     const prompt = buildEnhancedSummaryPrompt(companyData, scrapedContent);
     logger.debug(`Generated prompt for company ${companyData.id || companyData.name}`);
 
-    // 2. Make the API call to Anthropic
-    logger.info(`Calling Anthropic (${LLM_MODEL}) for company summary: ${companyData.id || companyData.name}`);
+    // 2. Make the API call to OpenAI
+    logger.info(`Calling OpenAI (${LLM_MODEL}) for company summary: ${companyData.id || companyData.name}`);
     
-    // Use structured output format for consistent parsing
-    const systemPrompt = `You are a helpful assistant designed to write concise, professional company summaries based on provided website content.
-You produce business analytics summaries with accurate information derived from the source material.
-Always be factual, objective, and professional in your analysis.
-Focus on the company's core business, products/services, target market, and unique value proposition.`;
-
-    const response = await anthropicClient.messages.create({
+    // Use the chat completions API for generating the summary
+    const response = await openaiClient.chat.completions.create({
       model: LLM_MODEL,
       max_tokens: MAX_TOKENS_SUMMARY,
       temperature: TEMPERATURE_SUMMARY,
-      system: systemPrompt,
       messages: [
+        { 
+          role: 'system', 
+          content: 'You are a helpful assistant designed to write concise, professional company summaries based on provided website content. You produce business analytics summaries with accurate information derived from the source material. Always be factual, objective, and professional in your analysis. Focus on the company\'s core business, products/services, target market, and unique value proposition.'
+        },
         { role: 'user', content: prompt }
       ]
     });
+    
     const duration = Date.now() - startTime;
 
     // Log token usage if available
     const usage = response.usage;
     if (usage) {
-       logger.info(`Anthropic API usage for ${companyData.id || companyData.name}: Input Tokens: ${usage.input_tokens}, Output Tokens: ${usage.output_tokens}. Duration: ${duration}ms`);
+       logger.info(`OpenAI API usage for ${companyData.id || companyData.name}: Input Tokens: ${usage.prompt_tokens}, Output Tokens: ${usage.completion_tokens}. Duration: ${duration}ms`);
     } else {
-       logger.info(`Anthropic API call completed for ${companyData.id || companyData.name}. Duration: ${duration}ms (Usage info not available)`);
+       logger.info(`OpenAI API call completed for ${companyData.id || companyData.name}. Duration: ${duration}ms (Usage info not available)`);
     }
 
     // 3. Extract the summary
-    const summary = response.content?.[0]?.text?.trim();
+    const summary = response.choices[0]?.message?.content?.trim();
 
     if (!summary) {
-      logger.error('Anthropic response did not contain a valid summary text block.', { response_body: response });
+      logger.error('OpenAI response did not contain a valid text block.', { response_body: response });
       throw new ApiError('Failed to generate summary: Empty or invalid response from LLM', 500);
     }
 

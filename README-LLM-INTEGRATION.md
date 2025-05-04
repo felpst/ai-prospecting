@@ -1,10 +1,10 @@
 # LLM Integration for Company Enrichment
 
-This document explains the implementation of the LLM (Large Language Model) integration for company data enrichment. The system uses Anthropic's Claude models to generate comprehensive company summaries based on scraped web content.
+This document explains the implementation of the LLM (Large Language Model) integration for company data enrichment. The system uses OpenAI models to generate comprehensive company summaries based on scraped web content.
 
 ## Features
 
-- **Robust LLM Integration**: Seamless integration with Anthropic's Claude API
+- **Robust LLM Integration**: Seamless integration with OpenAI API
 - **Advanced Prompt Engineering**: Structured prompts that optimize for factual summaries
 - **LinkedIn Support**: Special handling for companies with only LinkedIn profiles
 - **Error Handling**: Comprehensive error handling with specific error categories
@@ -19,7 +19,7 @@ The LLM integration consists of the following components:
 1. **Controller** (`companyController.js`): Handles the API endpoint for triggering enrichment
 2. **Scraper Service** (`scraperService.js`): Extracts content from company websites and LinkedIn
 3. **Storage Service** (`storageService.js`): Manages scraped content persistence
-4. **LLM Service** (`llmService.js`): Handles communication with Anthropic API
+4. **LLM Service** (`llmService.js`): Handles communication with OpenAI API
 5. **Enrichment Service** (`enrichmentService.js`): Integrates enrichment data with company records
 
 ## Endpoint
@@ -83,8 +83,8 @@ Each error category includes a user-friendly message with appropriate troublesho
 
 The LLM service is configured via environment variables:
 
-- `ANTHROPIC_API_KEY`: Your Anthropic API key
-- `MODEL`: Claude model to use (defaults to `claude-3-haiku-20240307`)
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `MODEL`: OpenAI model to use (defaults to `gpt-4o`)
 - `MAX_TOKENS_SUMMARY`: Maximum output tokens for summaries
 - `TEMPERATURE_SUMMARY`: Temperature for generation (lower is more factual)
 
@@ -117,7 +117,7 @@ The test suite includes:
 To run integration tests that make actual API calls:
 
 ```bash
-NODE_ENV=test ANTHROPIC_API_KEY=your_key_here RUN_INTEGRATION_TESTS=true npm test
+NODE_ENV=test OPENAI_API_KEY=your_key_here RUN_INTEGRATION_TESTS=true npm test
 ```
 
 ### Manual Testing
